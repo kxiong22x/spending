@@ -42,6 +42,11 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now')),
     UNIQUE(user_id, pattern)
   );
+
+  CREATE TABLE IF NOT EXISTS gemini_usage (
+    date        TEXT PRIMARY KEY,
+    tokens_used INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 module.exports = db;

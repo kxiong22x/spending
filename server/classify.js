@@ -1,7 +1,9 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { BUILTIN_CATEGORIES } = require('./constants');
+const db = require('./db');
 
 const VALID_CATEGORIES = BUILTIN_CATEGORIES;
+const DEFAULT_DAILY_TOKEN_LIMIT = 1_000_000;
 
 // Keyword fallback used when the Gemini API is unavailable
 const KEYWORDS = require('./keywords.json');
@@ -13,6 +15,25 @@ function keywordFallback(description) {
     if (keywords.some(kw => desc.includes(kw))) return category;
   }
   return 'other';
+}
+
+// Returns today's date as a YYYY-MM-DD string.
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Returns the number of Gemini tokens used today.
+function getTodayUsage() {
+  const row = db.prepare('SELECT tokens_used FROM gemini_usage WHERE date = ?').get(today());
+  return row ? row.tokens_used : 0;
+}
+
+// Adds tokensUsed to today's running Gemini token total.
+function recordUsage(tokensUsed) {
+  db.prepare(`
+    INSERT INTO gemini_usage (date, tokens_used) VALUES (?, ?)
+    ON CONFLICT(date) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used
+  `).run(today(), tokensUsed);
 }
 
 // Normalizes a transaction description into a stable lookup pattern.
@@ -55,6 +76,11 @@ async function classifyTransactions(transactions, learnedRules = new Map()) {
     console.warn('GOOGLE_AI_API_KEY not set — falling back to keyword classification');
     unknownCategories = unknownTransactions.map(t => keywordFallback(t.description));
   } else {
+    const limit = parseInt(process.env.GEMINI_DAILY_TOKEN_LIMIT ?? DEFAULT_DAILY_TOKEN_LIMIT, 10);
+    const used = getTodayUsage();
+    if (used >= limit) {
+      throw new Error(`Gemini daily token limit of ${limit.toLocaleString()} reached (used: ${used.toLocaleString()}). Uploads are disabled until tomorrow.`);
+    }
     unknownCategories = await classifyWithGemini(unknownTransactions);
   }
 
@@ -90,6 +116,10 @@ ${lines}`;
 
   try {
     const result = await model.generateContent(prompt);
+
+    const tokenCount = result.response.usageMetadata?.totalTokenCount;
+    if (tokenCount) recordUsage(tokenCount);
+
     const text = result.response.text().trim();
 
     // Strip markdown code fences if Gemini wraps the JSON
