@@ -1,0 +1,17 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+:root {
+  --primary: #ad77c9;
+  --hover-bg: #f0f0f0;
+}
+
+button:hover:not(:disabled) {
+  background-color: #9a5fb8;
+}

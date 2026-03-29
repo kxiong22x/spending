@@ -1,0 +1,36 @@
+.monthList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 15rem;
+}
+
+.monthRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  border: 1px solid var(--primary);
+  font-size: 1rem;
+  background-color: #fff;
+}
+
+.monthRow:hover {
+  background-color: var(--hover-bg);
+}
+
+.monthLabel {
+  flex: 1;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.deleteBtn {
+  composes: ghostBtn from '../../styles/shared.module.css';
+  color: #bbb;
+  font-size: 0.75rem;
+  padding: 0 0.125rem;
+  flex-shrink: 0;
+}
