@@ -28,6 +28,7 @@ export default function CsvDropzone({ files, onFilesAdded, onFileRemoved }) {
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Upload CSVs</h2>
+      <p className={styles.sectionHint}>Only transactions within the selected month will be imported. Transactions from other months will be ignored.</p>
       <div
         className={`${styles.dropzone} ${dragging ? styles.dropzoneDragging : ''}`}
         onDragOver={handleDragOver}

@@ -6,6 +6,14 @@
   composes: sectionTitle from '../../styles/shared.module.css';
 }
 
+.sectionHint {
+  margin: 0 0 0.75rem;
+  color: #888;
+  font-size: 0.8rem;
+  text-align: center;
+  font-style: italic;
+}
+
 .dropzone {
   border: 2px dashed #ccc;
   border-radius: 0.5rem;
