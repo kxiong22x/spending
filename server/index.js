@@ -83,6 +83,9 @@ const accountDeleteLimiter = rateLimit({
 });
 app.delete('/auth/account', accountDeleteLimiter);
 
+// Health check endpoint for uptime monitoring
+app.get('/ping', (req, res) => res.sendStatus(200));
+
 app.use('/auth', authRoutes);
 app.use('/months', monthsRoutes);
 app.use('/transactions', transactionsRoutes);
