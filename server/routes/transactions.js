@@ -6,6 +6,23 @@ const { BUILTIN_CATEGORIES } = require('../constants');
 
 const BUILTIN_CATEGORIES_SET = new Set(BUILTIN_CATEGORIES);
 
+// Mirrors the client-side AUTOPAY_PATTERNS in csv.js — keep these in sync.
+const AUTOPAY_PATTERNS = [
+  'autopay',
+  'automatic payment',
+  'online payment',
+  'payment thank you',
+  'payment received',
+  'payment - thank you',
+  'mobile payment',
+  'e-payment',
+  'web payment',
+  'bill payment',
+  'directpay',
+  'credit card payment',
+  'balance transfer',
+];
+
 const MAX_RULES_PER_USER = 1000;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_CATEGORY_LENGTH = 100;
@@ -72,7 +89,7 @@ router.post('/upload', async (req, res) => {
       skipped++;
     } else if (!row.date.startsWith(month)) {
       skipped++;
-    } else if (row.description.toLowerCase().includes('automatic payment')) {
+    } else if (AUTOPAY_PATTERNS.some(p => row.description.toLowerCase().includes(p))) {
       skipped++;
     } else {
       validRows.push(row);

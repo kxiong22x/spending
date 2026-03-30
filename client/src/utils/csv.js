@@ -3,6 +3,23 @@ export const AMOUNT_ALIASES      = ['amount', 'debit', 'transaction amount', 'ch
 export const DESCRIPTION_ALIASES = ['description', 'original description', 'memo', 'payee', 'merchant', 'name'];
 export const CATEGORY_ALIASES    = ['category'];
 
+// Substrings that identify credit card payment rows, which should be excluded from spending data.
+export const AUTOPAY_PATTERNS = [
+  'autopay',
+  'automatic payment',
+  'online payment',
+  'payment thank you',
+  'payment received',
+  'payment - thank you',
+  'mobile payment',
+  'e-payment',
+  'web payment',
+  'bill payment',
+  'directpay',
+  'credit card payment',
+  'balance transfer',
+];
+
 // Splits a single CSV line into fields, correctly handling quoted fields and escaped quotes.
 export function parseLine(line) {
   const fields = [];
@@ -74,6 +91,11 @@ export function parseCSV(text) {
     const date   = normaliseDate(fields[dateIdx]   ?? '');
     const amount = parseAmount(fields[amountIdx]   ?? '');
     if (!date || isNaN(amount)) { parseErrors++; continue; }
+    const desc = descriptionIdx !== -1 ? (fields[descriptionIdx] ?? '').toLowerCase() : '';
+    if (AUTOPAY_PATTERNS.some(p => desc.includes(p))) {
+      console.log('[csv] skipped autopay row:', fields[descriptionIdx] ?? '(no description)');
+      continue;
+    }
     rows.push({
       date,
       amount,
