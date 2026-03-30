@@ -1,12 +1,13 @@
 import { API } from '../../constants/constants';
 import styles from './Login.module.css';
+import creditCard from '/credit_card.png';
 
 export default function Login() {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Spending Tracker</h1>
       <p className={styles.subtitle}>Track and visualize your personal spending</p>
-      <img src="/credit_card.png" alt="Credit card" className={styles.heroImage} />
+      <img src={creditCard} alt="Credit card" className={styles.heroImage} />
       <a href={`${API}/auth/google`} className={styles.link}>
         <button className={styles.button}>
           <svg width="18" height="18" viewBox="0 0 18 18" className={styles.googleIcon}>
