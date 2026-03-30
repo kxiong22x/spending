@@ -31,8 +31,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
+const clientOrigin = new URL(process.env.CLIENT_URL || 'http://localhost:5173').origin;
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: clientOrigin,
   credentials: true, // required for cookies to be sent cross-origin
 }));
 

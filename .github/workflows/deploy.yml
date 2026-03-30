@@ -32,6 +32,9 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
+      - name: Copy index.html to 404.html for SPA routing
+        run: cp client/dist/index.html client/dist/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist
