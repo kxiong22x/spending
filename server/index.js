@@ -99,7 +99,7 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 
 async function start() {
   await initDb();
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
