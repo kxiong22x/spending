@@ -1,6 +1,6 @@
 const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
-const db = require('./db');
+const { db } = require('./db');
 
 passport.use(new GoogleStrategy(
   {
@@ -8,32 +8,33 @@ passport.use(new GoogleStrategy(
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
   },
-  (accessToken, refreshToken, profile, done) => {
+  async (accessToken, refreshToken, profile, done) => {
     try {
       const googleId = profile.id;
       const email = profile.emails[0].value;
       const name = profile.displayName;
       const avatarUrl = profile.photos[0]?.value ?? null;
 
-      const existing = db
-        .prepare('SELECT id, email, name, avatar_url FROM users WHERE google_id = ?')
-        .get(googleId);
+      const existing = await db.execute({
+        sql: 'SELECT id, email, name, avatar_url FROM users WHERE google_id = ?',
+        args: [googleId],
+      });
 
-      if (existing) {
-        return done(null, existing);
+      if (existing.rows.length > 0) {
+        return done(null, existing.rows[0]);
       }
 
-      const result = db
-        .prepare(
-          'INSERT INTO users (google_id, email, name, avatar_url) VALUES (?, ?, ?, ?)'
-        )
-        .run(googleId, email, name, avatarUrl);
+      const result = await db.execute({
+        sql: 'INSERT INTO users (google_id, email, name, avatar_url) VALUES (?, ?, ?, ?)',
+        args: [googleId, email, name, avatarUrl],
+      });
 
-      const user = db
-        .prepare('SELECT id, email, name, avatar_url FROM users WHERE id = ?')
-        .get(result.lastInsertRowid);
+      const user = await db.execute({
+        sql: 'SELECT id, email, name, avatar_url FROM users WHERE id = ?',
+        args: [Number(result.lastInsertRowid)],
+      });
 
-      return done(null, user);
+      return done(null, user.rows[0]);
     } catch (err) {
       return done(err);
     }

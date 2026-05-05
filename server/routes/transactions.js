@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db');
+const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { classifyTransactions, extractPattern } = require('../classify');
 const { BUILTIN_CATEGORIES } = require('../constants');
@@ -33,18 +33,19 @@ router.use(requireAuth);
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 // Copies recurring categories from the immediately preceding calendar month into targetMonth, skipping duplicates.
-function copyRecurringCategories(userId, targetMonth) {
+async function copyRecurringCategories(userId, targetMonth) {
   const [year, month] = targetMonth.split('-').map(Number);
   const prevMonth = month === 1 ? 12 : month - 1;
   const prevYear = month === 1 ? year - 1 : year;
   const sourceMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
 
-  db.prepare(`
-    INSERT OR IGNORE INTO categories (user_id, name, month, is_recurring)
-    SELECT user_id, name, ?, is_recurring
-    FROM categories
-    WHERE user_id = ? AND month = ? AND is_recurring = 1
-  `).run(targetMonth, userId, sourceMonth);
+  await db.execute({
+    sql: `INSERT OR IGNORE INTO categories (user_id, name, month, is_recurring)
+          SELECT user_id, name, ?, is_recurring
+          FROM categories
+          WHERE user_id = ? AND month = ? AND is_recurring = 1`,
+    args: [targetMonth, userId, sourceMonth],
+  });
 }
 
 // Returns true if str is a valid YYYY-MM-DD date string.
@@ -69,10 +70,11 @@ router.post('/upload', async (req, res) => {
   }
 
   // Reject if transactions already exist for this month
-  const existing = db.prepare(
-    "SELECT 1 FROM transactions WHERE user_id = ? AND strftime('%Y-%m', date) = ? LIMIT 1"
-  ).get(req.user.id, month);
-  if (existing) {
+  const existing = await db.execute({
+    sql: "SELECT 1 FROM transactions WHERE user_id = ? AND strftime('%Y-%m', date) = ? LIMIT 1",
+    args: [req.user.id, month],
+  });
+  if (existing.rows.length > 0) {
     return res.status(409).json({ error: `Month ${month} already exists.` });
   }
 
@@ -101,19 +103,21 @@ router.post('/upload', async (req, res) => {
   }
 
   // Copy recurring categories from the preceding calendar month into this month
-  copyRecurringCategories(req.user.id, month);
+  await copyRecurringCategories(req.user.id, month);
 
   // Load valid custom categories for this month (includes just-copied recurring ones)
-  const customCatRows = db.prepare(
-    'SELECT name FROM categories WHERE user_id = ? AND month = ?'
-  ).all(req.user.id, month);
-  const validCustomCategories = new Set(customCatRows.map(r => r.name));
+  const customCatRows = await db.execute({
+    sql: 'SELECT name FROM categories WHERE user_id = ? AND month = ?',
+    args: [req.user.id, month],
+  });
+  const validCustomCategories = new Set(customCatRows.rows.map(r => r.name));
 
   // Load learned rules for this user into a Map<pattern, category>
-  const rulesRows = db.prepare(
-    'SELECT pattern, category FROM classification_rules WHERE user_id = ?'
-  ).all(req.user.id);
-  const learnedRules = new Map(rulesRows.map(r => [r.pattern, r.category]));
+  const rulesRows = await db.execute({
+    sql: 'SELECT pattern, category FROM classification_rules WHERE user_id = ?',
+    args: [req.user.id],
+  });
+  const learnedRules = new Map(rulesRows.rows.map(r => [r.pattern, r.category]));
 
   // Classify all valid rows, checking learned rules before calling Gemini
   let categories, matchedPatterns;
@@ -134,25 +138,24 @@ router.post('/upload', async (req, res) => {
     }
   }
 
-  const insertStmt = db.prepare(
-    "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'csv')"
-  );
-  const incrementStmt = db.prepare(
-    'UPDATE classification_rules SET hit_count = hit_count + 1, updated_at = datetime(\'now\') WHERE user_id = ? AND pattern = ?'
-  );
+  const stmts = [];
+  for (let i = 0; i < validRows.length; i++) {
+    const description = (validRows[i].description ?? '').trim();
+    stmts.push({
+      sql: "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'csv')",
+      args: [req.user.id, validRows[i].date, description, categories[i], validRows[i].amount],
+    });
+  }
+  for (const pattern of matchedPatterns) {
+    stmts.push({
+      sql: "UPDATE classification_rules SET hit_count = hit_count + 1, updated_at = datetime('now') WHERE user_id = ? AND pattern = ?",
+      args: [req.user.id, pattern],
+    });
+  }
 
-  db.exec('BEGIN');
   try {
-    for (let i = 0; i < validRows.length; i++) {
-      const description = (validRows[i].description ?? '').trim();
-      insertStmt.run(req.user.id, validRows[i].date, description, categories[i], validRows[i].amount);
-    }
-    for (const pattern of matchedPatterns) {
-      incrementStmt.run(req.user.id, pattern);
-    }
-    db.exec('COMMIT');
+    await db.batch(stmts, 'write');
   } catch (err) {
-    db.exec('ROLLBACK');
     console.error('Upload error:', err.message);
     return res.status(500).json({ error: 'Database error during import' });
   }
@@ -161,7 +164,7 @@ router.post('/upload', async (req, res) => {
 });
 
 // POST /transactions  — manually add a single transaction
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { date, description, category, amount } = req.body;
 
   if (!isValidDate(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
@@ -171,15 +174,23 @@ router.post('/', (req, res) => {
   if (category.length > MAX_CATEGORY_LENGTH) return res.status(400).json({ error: `category must be ${MAX_CATEGORY_LENGTH} characters or fewer` });
   if (typeof amount !== 'number' || !isFinite(amount)) return res.status(400).json({ error: 'amount must be a number' });
 
-  const result = db.prepare(
-    "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'manual')"
-  ).run(req.user.id, date, description.trim(), category.trim(), amount);
+  const result = await db.execute({
+    sql: "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'manual')",
+    args: [req.user.id, date, description.trim(), category.trim(), amount],
+  });
 
-  res.status(201).json({ id: result.lastInsertRowid, date, description: description.trim(), category: category.trim(), amount, source: 'manual' });
+  res.status(201).json({
+    id: Number(result.lastInsertRowid),
+    date,
+    description: description.trim(),
+    category: category.trim(),
+    amount,
+    source: 'manual',
+  });
 });
 
 // PATCH /transactions/:id  — update category
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: 'Invalid id' });
@@ -193,86 +204,98 @@ router.patch('/:id', (req, res) => {
     return res.status(400).json({ error: `category must be ${MAX_CATEGORY_LENGTH} characters or fewer` });
   }
 
-  const tx = db.prepare(
-    'SELECT description FROM transactions WHERE id = ? AND user_id = ?'
-  ).get(id, req.user.id);
+  const txResult = await db.execute({
+    sql: 'SELECT description FROM transactions WHERE id = ? AND user_id = ?',
+    args: [id, req.user.id],
+  });
 
-  if (!tx) return res.status(404).json({ error: 'Transaction not found' });
+  if (txResult.rows.length === 0) return res.status(404).json({ error: 'Transaction not found' });
+  const tx = txResult.rows[0];
 
-  const result = db.prepare(
-    'UPDATE transactions SET category = ? WHERE id = ? AND user_id = ?'
-  ).run(category.trim(), id, req.user.id);
+  const updateResult = await db.execute({
+    sql: 'UPDATE transactions SET category = ? WHERE id = ? AND user_id = ?',
+    args: [category.trim(), id, req.user.id],
+  });
 
-  if (result.changes === 0) return res.status(404).json({ error: 'Transaction not found' });
+  if (updateResult.rowsAffected === 0) return res.status(404).json({ error: 'Transaction not found' });
 
   // Learn from this recategorization — evict LFU rule if at cap
   const pattern = extractPattern(tx.description);
   if (pattern) {
-    const ruleCount = db.prepare(
-      'SELECT COUNT(*) AS cnt FROM classification_rules WHERE user_id = ?'
-    ).get(req.user.id).cnt;
+    const ruleCountResult = await db.execute({
+      sql: 'SELECT COUNT(*) AS cnt FROM classification_rules WHERE user_id = ?',
+      args: [req.user.id],
+    });
+    const ruleCount = ruleCountResult.rows[0].cnt;
 
-    const alreadyExists = db.prepare(
-      'SELECT 1 FROM classification_rules WHERE user_id = ? AND pattern = ?'
-    ).get(req.user.id, pattern);
+    const existsResult = await db.execute({
+      sql: 'SELECT 1 FROM classification_rules WHERE user_id = ? AND pattern = ?',
+      args: [req.user.id, pattern],
+    });
+    const alreadyExists = existsResult.rows.length > 0;
 
+    const upsertStmts = [];
     if (!alreadyExists && ruleCount >= MAX_RULES_PER_USER) {
       // Evict the least-frequently-used rule (oldest among ties)
-      db.prepare(`
-        DELETE FROM classification_rules
-        WHERE user_id = ? AND id = (
-          SELECT id FROM classification_rules
-          WHERE user_id = ?
-          ORDER BY hit_count ASC, updated_at ASC
-          LIMIT 1
-        )
-      `).run(req.user.id, req.user.id);
+      upsertStmts.push({
+        sql: `DELETE FROM classification_rules
+              WHERE user_id = ? AND id = (
+                SELECT id FROM classification_rules
+                WHERE user_id = ?
+                ORDER BY hit_count ASC, updated_at ASC
+                LIMIT 1
+              )`,
+        args: [req.user.id, req.user.id],
+      });
     }
-
-    db.prepare(`
-      INSERT INTO classification_rules (user_id, pattern, category, hit_count, updated_at)
-      VALUES (?, ?, ?, 0, datetime('now'))
-      ON CONFLICT(user_id, pattern) DO UPDATE SET
-        category = excluded.category,
-        hit_count = 0,
-        updated_at = datetime('now')
-    `).run(req.user.id, pattern, category.trim());
+    upsertStmts.push({
+      sql: `INSERT INTO classification_rules (user_id, pattern, category, hit_count, updated_at)
+            VALUES (?, ?, ?, 0, datetime('now'))
+            ON CONFLICT(user_id, pattern) DO UPDATE SET
+              category = excluded.category,
+              hit_count = 0,
+              updated_at = datetime('now')`,
+      args: [req.user.id, pattern, category.trim()],
+    });
+    await db.batch(upsertStmts, 'write');
   }
 
   res.json({ ok: true });
 });
 
 // DELETE /transactions/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: 'Invalid id' });
   }
 
-  const result = db.prepare(
-    'DELETE FROM transactions WHERE id = ? AND user_id = ?'
-  ).run(id, req.user.id);
+  const result = await db.execute({
+    sql: 'DELETE FROM transactions WHERE id = ? AND user_id = ?',
+    args: [id, req.user.id],
+  });
 
-  if (result.changes === 0) return res.status(404).json({ error: 'Transaction not found' });
+  if (result.rowsAffected === 0) return res.status(404).json({ error: 'Transaction not found' });
   res.json({ ok: true });
 });
 
 // GET /transactions?month=YYYY-MM
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { month } = req.query;
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
     return res.status(400).json({ error: 'month query parameter required (YYYY-MM)' });
   }
 
-  const transactions = db.prepare(`
-    SELECT id, date, description, category, amount, source
-    FROM transactions
-    WHERE user_id = ?
-      AND strftime('%Y-%m', date) = ?
-    ORDER BY date DESC, id DESC
-  `).all(req.user.id, month);
+  const result = await db.execute({
+    sql: `SELECT id, date, description, category, amount, source
+          FROM transactions
+          WHERE user_id = ?
+            AND strftime('%Y-%m', date) = ?
+          ORDER BY date DESC, id DESC`,
+    args: [req.user.id, month],
+  });
 
-  res.json(transactions);
+  res.json(result.rows);
 });
 
 module.exports = router;

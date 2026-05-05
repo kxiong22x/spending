@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { BUILTIN_CATEGORIES } = require('./constants');
-const db = require('./db');
+const { db } = require('./db');
 
 const VALID_CATEGORIES = BUILTIN_CATEGORIES;
 const DEFAULT_DAILY_TOKEN_LIMIT = 1_000_000;
@@ -23,17 +23,21 @@ function today() {
 }
 
 // Returns the number of Gemini tokens used today.
-function getTodayUsage() {
-  const row = db.prepare('SELECT tokens_used FROM gemini_usage WHERE date = ?').get(today());
-  return row ? row.tokens_used : 0;
+async function getTodayUsage() {
+  const result = await db.execute({
+    sql: 'SELECT tokens_used FROM gemini_usage WHERE date = ?',
+    args: [today()],
+  });
+  return result.rows.length > 0 ? result.rows[0].tokens_used : 0;
 }
 
 // Adds tokensUsed to today's running Gemini token total.
-function recordUsage(tokensUsed) {
-  db.prepare(`
-    INSERT INTO gemini_usage (date, tokens_used) VALUES (?, ?)
-    ON CONFLICT(date) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used
-  `).run(today(), tokensUsed);
+async function recordUsage(tokensUsed) {
+  await db.execute({
+    sql: `INSERT INTO gemini_usage (date, tokens_used) VALUES (?, ?)
+          ON CONFLICT(date) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used`,
+    args: [today(), tokensUsed],
+  });
 }
 
 // Normalizes a transaction description into a stable lookup pattern.
@@ -77,7 +81,7 @@ async function classifyTransactions(transactions, learnedRules = new Map()) {
     unknownCategories = unknownTransactions.map(t => keywordFallback(t.description));
   } else {
     const limit = parseInt(process.env.GEMINI_DAILY_TOKEN_LIMIT ?? DEFAULT_DAILY_TOKEN_LIMIT, 10);
-    const used = getTodayUsage();
+    const used = await getTodayUsage();
     if (used >= limit) {
       throw new Error(`Gemini daily token limit of ${limit.toLocaleString()} reached (used: ${used.toLocaleString()}). Uploads are disabled until tomorrow.`);
     }
@@ -118,7 +122,7 @@ ${lines}`;
     const result = await model.generateContent(prompt);
 
     const tokenCount = result.response.usageMetadata?.totalTokenCount;
-    if (tokenCount) recordUsage(tokenCount);
+    if (tokenCount) await recordUsage(tokenCount);
 
     const text = result.response.text().trim();
 

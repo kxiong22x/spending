@@ -8,14 +8,14 @@ const passport = require('passport');
 const { rateLimit } = require('express-rate-limit');
 
 require('./passport'); // register Google strategy
-require('./db');  // initializes DB + tables on startup
+const { initDb } = require('./db');
 const authRoutes = require('./routes/auth');
 const monthsRoutes = require('./routes/months');
 const transactionsRoutes = require('./routes/transactions');
 const categoriesRoutes = require('./routes/categories');
 
 // Fail fast if any required secret is missing or too short to be safe
-const REQUIRED_ENV_VARS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'JWT_SECRET', 'GOOGLE_AI_API_KEY'];
+const REQUIRED_ENV_VARS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'JWT_SECRET', 'GOOGLE_AI_API_KEY', 'TURSO_URL', 'TURSO_AUTH_TOKEN'];
 for (const key of REQUIRED_ENV_VARS) {
   if (!process.env[key]) {
     console.error(`FATAL: Missing required environment variable: ${key}`);
@@ -97,6 +97,14 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ error: 'An unexpected error occurred' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+async function start() {
+  await initDb();
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+start().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

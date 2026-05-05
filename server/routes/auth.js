@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/requireAuth');
-const db = require('../db');
+const { db } = require('../db');
 
 const router = express.Router();
 
@@ -49,14 +49,14 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 // Deletes the authenticated user's account and all associated data
-router.delete('/account', requireAuth, (req, res) => {
+router.delete('/account', requireAuth, async (req, res) => {
   const userId = req.user.id;
-  db.transaction(() => {
-    db.prepare('DELETE FROM classification_rules WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM categories WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM transactions WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-  })();
+  await db.batch([
+    { sql: 'DELETE FROM classification_rules WHERE user_id = ?', args: [userId] },
+    { sql: 'DELETE FROM categories WHERE user_id = ?', args: [userId] },
+    { sql: 'DELETE FROM transactions WHERE user_id = ?', args: [userId] },
+    { sql: 'DELETE FROM users WHERE id = ?', args: [userId] },
+  ], 'write');
   res.clearCookie('token');
   res.status(204).end();
 });

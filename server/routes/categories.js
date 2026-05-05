@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db');
+const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { BUILTIN_CATEGORIES } = require('../constants');
 
@@ -11,19 +11,20 @@ const MAX_NAME_LENGTH = 50;
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
 
 // GET /categories?month=YYYY-MM
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { month } = req.query;
   if (!month || !MONTH_REGEX.test(month)) {
     return res.status(400).json({ error: 'month query parameter required (YYYY-MM)' });
   }
-  const rows = db.prepare(
-    'SELECT name, is_recurring FROM categories WHERE user_id = ? AND month = ? ORDER BY created_at ASC, id ASC'
-  ).all(req.user.id, month);
-  res.json(rows);
+  const result = await db.execute({
+    sql: 'SELECT name, is_recurring FROM categories WHERE user_id = ? AND month = ? ORDER BY created_at ASC, id ASC',
+    args: [req.user.id, month],
+  });
+  res.json(result.rows);
 });
 
 // POST /categories
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
   const raw = req.body.name;
   const { month, is_recurring } = req.body;
 
@@ -37,7 +38,10 @@ router.post('/', (req, res, next) => {
   const recurring = is_recurring === false ? 0 : 1;
 
   try {
-    db.prepare('INSERT INTO categories (user_id, name, month, is_recurring) VALUES (?, ?, ?, ?)').run(req.user.id, name, month, recurring);
+    await db.execute({
+      sql: 'INSERT INTO categories (user_id, name, month, is_recurring) VALUES (?, ?, ?, ?)',
+      args: [req.user.id, name, month, recurring],
+    });
   } catch (err) {
     if (err.message.includes('UNIQUE')) return res.status(409).json({ error: `Category "${name}" already exists for this month` });
     return next(err);
@@ -47,7 +51,7 @@ router.post('/', (req, res, next) => {
 });
 
 // DELETE /categories/:name?month=YYYY-MM
-router.delete('/:name', (req, res) => {
+router.delete('/:name', async (req, res) => {
   const name = req.params.name;
   const { month } = req.query;
 
@@ -58,25 +62,28 @@ router.delete('/:name', (req, res) => {
     return res.status(400).json({ error: 'month query parameter required (YYYY-MM)' });
   }
 
-  const deleteCategory = db.transaction((userId, catName, catMonth) => {
-    const result = db.prepare(
-      'DELETE FROM categories WHERE user_id = ? AND name = ? AND month = ?'
-    ).run(userId, catName, catMonth);
+  const txn = await db.transaction('write');
+  try {
+    const deleteResult = await txn.execute({
+      sql: 'DELETE FROM categories WHERE user_id = ? AND name = ? AND month = ?',
+      args: [req.user.id, name, month],
+    });
 
-    if (result.changes === 0) return null;
+    if (deleteResult.rowsAffected === 0) {
+      await txn.rollback();
+      return res.status(404).json({ error: 'Category not found' });
+    }
 
-    // Move this month's transactions in the deleted category to "other"
-    db.prepare(`
-      UPDATE transactions
-      SET category = 'other'
-      WHERE user_id = ? AND category = ? AND strftime('%Y-%m', date) = ?
-    `).run(userId, catName, catMonth);
+    await txn.execute({
+      sql: `UPDATE transactions SET category = 'other' WHERE user_id = ? AND category = ? AND strftime('%Y-%m', date) = ?`,
+      args: [req.user.id, name, month],
+    });
 
-    return result;
-  });
-
-  const result = deleteCategory(req.user.id, name, month);
-  if (!result) return res.status(404).json({ error: 'Category not found' });
+    await txn.commit();
+  } catch (err) {
+    await txn.rollback();
+    throw err;
+  }
 
   res.json({ ok: true });
 });
