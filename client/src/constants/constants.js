@@ -9,8 +9,16 @@ export const CURRENT_YEAR = new Date().getFullYear();
 export const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i);
 
 export const PIE_COLORS = [
-  '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f',
-  '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac',
+  "#c8d6d3",
+  "#5f9595",
+  "#fdbaa8",
+  "#f5d0c3",
+  "#efbb68",
+  "#abb8bd",
+  "#f9d08c",
+  "#f9e3de",
+  "#f4dcce",
+  "#88acab"
 ];
 
 export const CATEGORY_ORDER = ['dining', 'groceries', 'shopping', 'entertainment', 'transportation', 'other'];

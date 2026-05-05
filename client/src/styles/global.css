@@ -8,10 +8,10 @@ body {
 }
 
 :root {
-  --primary: #ad77c9;
+  --primary: #5f9595;
   --hover-bg: #f0f0f0;
 }
 
 button:hover:not(:disabled) {
-  background-color: #9a5fb8;
+  background-color: #4a7a7a;
 }

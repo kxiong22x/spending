@@ -1,38 +1,6 @@
 .chartWrap {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 2.5rem;
-  margin-bottom: 2.5rem;
-  flex-wrap: wrap;
-}
-
-.legend {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.legendItem {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.legendSwatch {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 0.125rem;
-  flex-shrink: 0;
-}
-
-.legendLabel {
-  flex: 1;
-}
-
-.legendPct {
-  color: #666;
-  min-width: 2.5rem;
-  text-align: right;
+  margin: 0.5rem auto 0.75rem;
+  max-width: 520px;
 }
