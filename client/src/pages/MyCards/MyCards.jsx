@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCards } from '../../hooks/useCards';
+import { MAX_NAME_LENGTH } from '../../constants/constants';
 import styles from './MyCards.module.css';
 
 export default function MyCards() {
@@ -40,7 +41,7 @@ export default function MyCards() {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. AMEX 5543"
-          maxLength={50}
+          maxLength={MAX_NAME_LENGTH}
           disabled={submitting}
         />
         <button type="submit" className={styles.registerBtn} disabled={submitting || !name.trim()}>

@@ -2,7 +2,6 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { BUILTIN_CATEGORIES } = require('./constants');
 const { db } = require('./db');
 
-const VALID_CATEGORIES = BUILTIN_CATEGORIES;
 const DEFAULT_DAILY_TOKEN_LIMIT = 1_000_000;
 
 // Keyword fallback used when the Gemini API is unavailable
@@ -134,7 +133,7 @@ ${lines}`;
       throw new Error('Unexpected response length from Gemini');
     }
 
-    return categories.map(c => (VALID_CATEGORIES.includes(c) ? c : 'other'));
+    return categories.map(c => (BUILTIN_CATEGORIES.includes(c) ? c : 'other'));
   } catch (err) {
     console.error('Gemini classification failed, falling back to keywords:', err.message);
     return transactions.map(t => keywordFallback(t.description));

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDollar } from '../../utils/format';
 import styles from './PieChart.module.css';
 
 const PAD = 4;
@@ -9,7 +10,7 @@ const MIN_LABEL_Y = VIEW_TOP + 13 + PAD; // minimum baseline: cap height + paddi
 function getLabelBox(s, dx, dy) {
   const x = s.lx + dx;
   const y = s.ly + dy;
-  const amountStr = `$${s.catTotal.toFixed(2)}`;
+  const amountStr = formatDollar(s.catTotal);
   const pctStr = `${(s.fraction * 100).toFixed(1)}%`;
   const w = Math.max(
     s.name.length * 13 * 0.55,
@@ -158,7 +159,7 @@ export default function PieChart({ categories, colorMap, onSliceHover }) {
           <line x1={s.lineX1} y1={s.lineY1} x2={s.lineX2} y2={s.lineY2} stroke="#bbb" strokeWidth={1} />
           <text textAnchor={s.anchor} fontFamily="sans-serif">
             <tspan x={s.lx} y={s.ly} fontSize="13" fontWeight="600" fill="#333">{s.name}</tspan>
-            <tspan x={s.lx} dy="17" fontSize="12" fill="#444">${s.catTotal.toFixed(2)}</tspan>
+            <tspan x={s.lx} dy="17" fontSize="12" fill="#444">{formatDollar(s.catTotal)}</tspan>
             <tspan x={s.lx} dy="15" fontSize="11" fill="#777">100%</tspan>
           </text>
         </svg>
@@ -195,7 +196,7 @@ export default function PieChart({ categories, colorMap, onSliceHover }) {
               />
               <text textAnchor={s.anchor} fontFamily="sans-serif">
                 <tspan x={s.lx + dx} y={s.ly + dy} fontSize="13" fontWeight="600" fill="#333">{s.name}</tspan>
-                <tspan x={s.lx + dx} dy="17" fontSize="12" fill="#444">${s.catTotal.toFixed(2)}</tspan>
+                <tspan x={s.lx + dx} dy="17" fontSize="12" fill="#444">{formatDollar(s.catTotal)}</tspan>
                 <tspan x={s.lx + dx} dy="15" fontSize="11" fill="#777">{(s.fraction * 100).toFixed(1)}%</tspan>
               </text>
             </g>

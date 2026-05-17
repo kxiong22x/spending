@@ -1,3 +1,4 @@
+import { formatDollar } from '../../utils/format';
 import styles from './CategoryColumn.module.css';
 
 export default function CategoryColumn({ cat, color, isDragOver, isCustom, highlightedTxIds, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDeleteCategory, onDeleteTransaction }) {
@@ -12,7 +13,7 @@ export default function CategoryColumn({ cat, color, isDragOver, isCustom, highl
       <div className={styles.catHeader}>
         <span className={styles.catSwatch} style={{ backgroundColor: color }} />
         <span className={styles.catName}>{cat.name}</span>
-        {cat.total > 0 && <span className={styles.catTotal}>${cat.total.toFixed(2)}</span>}
+        {cat.total > 0 && <span className={styles.catTotal}>{formatDollar(cat.total)}</span>}
         {isCustom && (
           <button
             onClick={onDeleteCategory}
@@ -35,7 +36,7 @@ export default function CategoryColumn({ cat, color, isDragOver, isCustom, highl
         >
           <div className={styles.txTopRow}>
             <span className={styles.txDate}>{tx.date}</span>
-            <span className={styles.txAmt}>${tx.amount.toFixed(2)}</span>
+            <span className={styles.txAmt}>{formatDollar(tx.amount)}</span>
             {tx.source === 'manual' && (
               <button
                 onClick={() => onDeleteTransaction(tx.id)}

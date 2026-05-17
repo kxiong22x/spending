@@ -1,14 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
-const { BUILTIN_CATEGORIES } = require('../constants');
+const { BUILTIN_CATEGORIES_SET, MONTH_REGEX, MAX_NAME_LENGTH } = require('../constants');
 
 const router = express.Router();
 router.use(requireAuth);
-
-const BUILTIN_CATEGORIES_SET = new Set(BUILTIN_CATEGORIES);
-const MAX_NAME_LENGTH = 50;
-const MONTH_REGEX = /^\d{4}-\d{2}$/;
 
 // GET /categories?month=YYYY-MM
 router.get('/', async (req, res) => {

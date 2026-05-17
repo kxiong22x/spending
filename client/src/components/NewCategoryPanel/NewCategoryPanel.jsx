@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API } from '../../constants/constants';
+import { API, MAX_NAME_LENGTH } from '../../constants/constants';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewCategoryPanel.module.css';
 
@@ -41,7 +41,7 @@ export default function NewCategoryPanel({ yearMonth, onAddCategory }) {
           value={catName}
           onChange={e => { setCatName(e.target.value); setCatError(null); }}
           placeholder="Category name"
-          maxLength={50}
+          maxLength={MAX_NAME_LENGTH}
           disabled={catSaving}
           className={panelStyles.panelInput}
         />

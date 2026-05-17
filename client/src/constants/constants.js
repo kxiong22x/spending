@@ -35,3 +35,6 @@ export const CARD_PIE_COLORS = [
 ];
 
 export const CATEGORY_ORDER = ['dining', 'groceries', 'shopping', 'entertainment', 'transportation', 'other'];
+
+// Must stay in sync with MAX_NAME_LENGTH in server/constants.js.
+export const MAX_NAME_LENGTH = 50;

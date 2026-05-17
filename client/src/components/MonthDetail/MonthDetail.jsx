@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatMonth } from '../../utils/format';
+import { formatMonth, formatDollar } from '../../utils/format';
 import useMonthData from '../../hooks/useMonthData';
 import useMonths from '../../hooks/useMonths';
 import { useCards } from '../../hooks/useCards';
@@ -90,7 +90,7 @@ export default function MonthDetail({ yearMonth }) {
         {nextMonth ? <button onClick={() => navigate(`/month/${nextMonth}`)} className={styles.navBtn}>Next Month →</button> : <div />}
       </div>
       <h1 className={styles.pageTitle}>{label}</h1>
-      {!loading && <p className={styles.totalSpend}>Total Spending: ${transactions.reduce((sum, t) => sum + t.amount, 0).toFixed(2)}</p>}
+      {!loading && <p className={styles.totalSpend}>Total Spending: {formatDollar(transactions.reduce((sum, t) => sum + t.amount, 0))}</p>}
 
       {loading ? (
         <p className={styles.muted}>Loading…</p>

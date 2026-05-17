@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
+const { MONTH_REGEX } = require('../constants');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
 // DELETE /months/:yearMonth  — delete all transactions for a month
 router.delete('/:yearMonth', async (req, res) => {
   const { yearMonth } = req.params;
-  if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
+  if (!MONTH_REGEX.test(yearMonth)) {
     return res.status(400).json({ error: 'Invalid month format (expected YYYY-MM)' });
   }
 

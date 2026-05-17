@@ -1,11 +1,10 @@
 const express = require('express');
 const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
+const { MAX_NAME_LENGTH } = require('../constants');
 
 const router = express.Router();
 router.use(requireAuth);
-
-const MAX_NAME_LENGTH = 50;
 
 // GET /cards — list all cards for the logged-in user
 router.get('/', async (req, res, next) => {

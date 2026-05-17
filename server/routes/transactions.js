@@ -2,9 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { classifyTransactions, extractPattern } = require('../classify');
-const { BUILTIN_CATEGORIES } = require('../constants');
-
-const BUILTIN_CATEGORIES_SET = new Set(BUILTIN_CATEGORIES);
+const { BUILTIN_CATEGORIES_SET, MONTH_REGEX, DATE_REGEX } = require('../constants');
 
 // Mirrors the client-side AUTOPAY_PATTERNS in csv.js — keep these in sync.
 const AUTOPAY_PATTERNS = [
@@ -30,7 +28,11 @@ const MAX_CATEGORY_LENGTH = 100;
 const router = express.Router();
 router.use(requireAuth);
 
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+// Parses and validates a route :id parameter; returns null if invalid.
+function parseIntParam(raw) {
+  const n = parseInt(raw, 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 // Copies recurring categories from the immediately preceding calendar month into targetMonth, skipping duplicates.
 async function copyRecurringCategories(userId, targetMonth) {
@@ -52,8 +54,6 @@ async function copyRecurringCategories(userId, targetMonth) {
 function isValidDate(str) {
   return typeof str === 'string' && DATE_REGEX.test(str);
 }
-
-const MONTH_REGEX = /^\d{4}-\d{2}$/;
 
 // POST /transactions/upload
 router.post('/upload', async (req, res) => {
@@ -219,10 +219,8 @@ router.post('/', async (req, res) => {
 
 // PATCH /transactions/:id  — update category
 router.patch('/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ error: 'Invalid id' });
-  }
+  const id = parseIntParam(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
 
   const { category } = req.body;
   if (typeof category !== 'string' || !category.trim()) {
@@ -293,10 +291,8 @@ router.patch('/:id', async (req, res) => {
 
 // DELETE /transactions/:id
 router.delete('/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({ error: 'Invalid id' });
-  }
+  const id = parseIntParam(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
 
   const result = await db.execute({
     sql: 'DELETE FROM transactions WHERE id = ? AND user_id = ?',
