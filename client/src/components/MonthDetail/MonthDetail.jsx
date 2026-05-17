@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatMonth } from '../../utils/format';
 import useMonthData from '../../hooks/useMonthData';
 import useMonths from '../../hooks/useMonths';
+import { useCards } from '../../hooks/useCards';
+import { CARD_PIE_COLORS } from '../../constants/constants';
 import PieChart from '../PieChart/PieChart';
 import CategoryColumn from '../CategoryColumn/CategoryColumn';
 import NewCategoryPanel from '../NewCategoryPanel/NewCategoryPanel';
@@ -11,6 +13,7 @@ import styles from './MonthDetail.module.css';
 
 export default function MonthDetail({ yearMonth }) {
   const [dragOverCat, setDragOverCat] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
   const navigate = useNavigate();
 
   const {
@@ -29,6 +32,31 @@ export default function MonthDetail({ yearMonth }) {
     deleteCategory,
     deleteTransaction,
   } = useMonthData(yearMonth);
+
+  const { cards } = useCards();
+
+  const cardColorMap = useMemo(() => Object.fromEntries(
+    cards.map((card, i) => [card.name, CARD_PIE_COLORS[i % CARD_PIE_COLORS.length]])
+  ), [cards]);
+
+  const highlightedTxIds = useMemo(() => {
+    if (!hoveredCard) return new Set();
+    const card = cards.find(c => c.name === hoveredCard);
+    if (!card) return new Set();
+    return new Set(transactions.filter(tx => tx.card_id === card.id).map(tx => tx.id));
+  }, [hoveredCard, cards, transactions]);
+
+  const cardsWithSpending = useMemo(() => {
+    const cardById = Object.fromEntries(cards.map(c => [c.id, c.name]));
+    const totals = {};
+    for (const tx of transactions) {
+      if (tx.card_id == null) continue;
+      const name = cardById[tx.card_id];
+      if (!name) continue;
+      totals[name] = (totals[name] ?? 0) + tx.amount;
+    }
+    return Object.entries(totals).map(([name, total]) => ({ name, total }));
+  }, [cards, transactions]);
 
   const { months } = useMonths();
   const sortedMonths = [...months].sort();
@@ -68,8 +96,21 @@ export default function MonthDetail({ yearMonth }) {
         <p className={styles.muted}>Loading…</p>
       ) : (
         <>
-          {categoriesWithTxs.length > 0 && (
-            <PieChart categories={categoriesWithTxs} colorMap={colorMap} />
+          {(categoriesWithTxs.length > 0 || cardsWithSpending.length > 0) && (
+            <div className={styles.pieRow}>
+              {categoriesWithTxs.length > 0 && (
+                <div className={styles.pieCell}>
+                  <h2 className={styles.categoriesHeading}>Spending by Category</h2>
+                  <PieChart categories={categoriesWithTxs} colorMap={colorMap} />
+                </div>
+              )}
+              {cardsWithSpending.length > 0 && (
+                <div className={styles.pieCell}>
+                  <h2 className={styles.categoriesHeading}>Spending by Card</h2>
+                  <PieChart categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={setHoveredCard} />
+                </div>
+              )}
+            </div>
           )}
 
           <div className={styles.centeredText}>
@@ -85,6 +126,7 @@ export default function MonthDetail({ yearMonth }) {
                 color={colorMap[cat.name]}
                 isDragOver={dragOverCat === cat.name}
                 isCustom={customCategories.some(c => c.name === cat.name)}
+                highlightedTxIds={highlightedTxIds}
                 onDragStart={startDrag}
                 onDragEnd={cancelDrag}
                 onDragOver={e => handleDragOver(e, cat.name)}
@@ -99,6 +141,7 @@ export default function MonthDetail({ yearMonth }) {
               <NewCategoryPanel yearMonth={yearMonth} onAddCategory={addCategory} />
               <NewExpensePanel
                 allCategoryNames={allCategoryNames}
+                cards={cards}
                 onAddTransaction={addTransaction}
                 defaultDate={defaultDate}
               />

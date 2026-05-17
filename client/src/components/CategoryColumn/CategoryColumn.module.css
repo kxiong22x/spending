@@ -87,3 +87,14 @@
   padding: 0 0.125rem;
   line-height: 1;
 }
+
+.txHighlighted {
+  background-color: #fffbe6;
+  border-left: 3px solid #f5a623;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.txDimmed {
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}

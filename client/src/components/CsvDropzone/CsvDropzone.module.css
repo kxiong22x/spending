@@ -1,23 +1,7 @@
-.section {
-  composes: section from '../../styles/shared.module.css';
-}
-
-.sectionTitle {
-  composes: sectionTitle from '../../styles/shared.module.css';
-}
-
-.sectionHint {
-  margin: 0 0 0.75rem;
-  color: #888;
-  font-size: 0.8rem;
-  text-align: center;
-  font-style: italic;
-}
-
 .dropzone {
   border: 2px dashed #ccc;
   border-radius: 0.5rem;
-  padding: 2.5rem 1.5rem;
+  padding: 1rem 1.5rem;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -37,7 +21,7 @@
 .fileList {
   list-style: none;
   padding: 0;
-  margin: 0.75rem 0 0;
+  margin: 0.5rem 0 0;
   display: flex;
   flex-direction: column;
   gap: 0.375rem;

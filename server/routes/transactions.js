@@ -57,16 +57,31 @@ const MONTH_REGEX = /^\d{4}-\d{2}$/;
 
 // POST /transactions/upload
 router.post('/upload', async (req, res) => {
-  const { month, rows } = req.body;
+  const { month, cardRows } = req.body;
 
   if (!month || !MONTH_REGEX.test(month)) {
     return res.status(400).json({ error: 'month is required (YYYY-MM)' });
   }
-  if (!Array.isArray(rows)) {
-    return res.status(400).json({ error: 'rows must be an array' });
+  if (!Array.isArray(cardRows) || cardRows.length === 0) {
+    return res.status(400).json({ error: 'cardRows must be a non-empty array' });
   }
-  if (rows.length > 5000) {
+
+  const totalRows = cardRows.reduce((sum, cr) => sum + (Array.isArray(cr.rows) ? cr.rows.length : 0), 0);
+  if (totalRows > 5000) {
     return res.status(400).json({ error: 'Maximum 5000 rows per upload' });
+  }
+
+  // Validate that each cardId belongs to the logged-in user
+  const cardIds = cardRows.map(cr => cr.cardId);
+  const ownedCards = await db.execute({
+    sql: `SELECT id FROM cards WHERE user_id = ? AND id IN (${cardIds.map(() => '?').join(',')})`,
+    args: [req.user.id, ...cardIds],
+  });
+  const ownedCardIds = new Set(ownedCards.rows.map(r => Number(r.id)));
+  for (const cardId of cardIds) {
+    if (!ownedCardIds.has(Number(cardId))) {
+      return res.status(403).json({ error: `Card ${cardId} not found` });
+    }
   }
 
   // Reject if transactions already exist for this month
@@ -78,23 +93,26 @@ router.post('/upload', async (req, res) => {
     return res.status(409).json({ error: `Month ${month} already exists.` });
   }
 
-  // Separate valid rows from invalid ones; ignore rows outside the specified month
+  // Separate valid rows from invalid ones, tagging each with its cardId
   const validRows = [];
   let skipped = 0;
 
-  for (const row of rows) {
-    if (!isValidDate(row.date) || typeof row.amount !== 'number' || !isFinite(row.amount)) {
-      skipped++;
-    } else if (typeof row.description !== 'string') {
-      skipped++;
-    } else if (row.description.length > MAX_DESCRIPTION_LENGTH) {
-      skipped++;
-    } else if (!row.date.startsWith(month)) {
-      skipped++;
-    } else if (AUTOPAY_PATTERNS.some(p => row.description.toLowerCase().includes(p))) {
-      skipped++;
-    } else {
-      validRows.push(row);
+  for (const { cardId, rows } of cardRows) {
+    if (!Array.isArray(rows)) continue;
+    for (const row of rows) {
+      if (!isValidDate(row.date) || typeof row.amount !== 'number' || !isFinite(row.amount)) {
+        skipped++;
+      } else if (typeof row.description !== 'string') {
+        skipped++;
+      } else if (row.description.length > MAX_DESCRIPTION_LENGTH) {
+        skipped++;
+      } else if (!row.date.startsWith(month)) {
+        skipped++;
+      } else if (AUTOPAY_PATTERNS.some(p => row.description.toLowerCase().includes(p))) {
+        skipped++;
+      } else {
+        validRows.push({ ...row, cardId });
+      }
     }
   }
 
@@ -142,8 +160,8 @@ router.post('/upload', async (req, res) => {
   for (let i = 0; i < validRows.length; i++) {
     const description = (validRows[i].description ?? '').trim();
     stmts.push({
-      sql: "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'csv')",
-      args: [req.user.id, validRows[i].date, description, categories[i], validRows[i].amount],
+      sql: "INSERT INTO transactions (user_id, date, description, category, amount, source, card_id) VALUES (?, ?, ?, ?, ?, 'csv', ?)",
+      args: [req.user.id, validRows[i].date, description, categories[i], validRows[i].amount, validRows[i].cardId],
     });
   }
   for (const pattern of matchedPatterns) {
@@ -165,7 +183,7 @@ router.post('/upload', async (req, res) => {
 
 // POST /transactions  — manually add a single transaction
 router.post('/', async (req, res) => {
-  const { date, description, category, amount } = req.body;
+  const { date, description, category, amount, card_id } = req.body;
 
   if (!isValidDate(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
   if (typeof description !== 'string' || !description.trim()) return res.status(400).json({ error: 'description is required' });
@@ -174,9 +192,18 @@ router.post('/', async (req, res) => {
   if (category.length > MAX_CATEGORY_LENGTH) return res.status(400).json({ error: `category must be ${MAX_CATEGORY_LENGTH} characters or fewer` });
   if (typeof amount !== 'number' || !isFinite(amount)) return res.status(400).json({ error: 'amount must be a number' });
 
+  const resolvedCardId = card_id ?? null;
+  if (resolvedCardId !== null) {
+    const owned = await db.execute({
+      sql: 'SELECT 1 FROM cards WHERE id = ? AND user_id = ?',
+      args: [resolvedCardId, req.user.id],
+    });
+    if (owned.rows.length === 0) return res.status(403).json({ error: 'Card not found' });
+  }
+
   const result = await db.execute({
-    sql: "INSERT INTO transactions (user_id, date, description, category, amount, source) VALUES (?, ?, ?, ?, ?, 'manual')",
-    args: [req.user.id, date, description.trim(), category.trim(), amount],
+    sql: "INSERT INTO transactions (user_id, date, description, category, amount, source, card_id) VALUES (?, ?, ?, ?, ?, 'manual', ?)",
+    args: [req.user.id, date, description.trim(), category.trim(), amount, resolvedCardId],
   });
 
   res.status(201).json({
@@ -186,6 +213,7 @@ router.post('/', async (req, res) => {
     category: category.trim(),
     amount,
     source: 'manual',
+    card_id: resolvedCardId,
   });
 });
 
@@ -287,7 +315,7 @@ router.get('/', async (req, res) => {
   }
 
   const result = await db.execute({
-    sql: `SELECT id, date, description, category, amount, source
+    sql: `SELECT id, date, description, category, amount, source, card_id
           FROM transactions
           WHERE user_id = ?
             AND strftime('%Y-%m', date) = ?

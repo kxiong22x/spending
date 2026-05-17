@@ -27,7 +27,8 @@ async function initDb() {
         description TEXT NOT NULL DEFAULT '',
         category    TEXT,
         amount      REAL NOT NULL,
-        source      TEXT NOT NULL DEFAULT 'csv'
+        source      TEXT NOT NULL DEFAULT 'csv',
+        card_id     INTEGER REFERENCES cards(id)
       )`,
       args: [],
     },
@@ -59,6 +60,15 @@ async function initDb() {
       sql: `CREATE TABLE IF NOT EXISTS gemini_usage (
         date        TEXT PRIMARY KEY,
         tokens_used INTEGER NOT NULL DEFAULT 0
+      )`,
+      args: [],
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS cards (
+        id      INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        name    TEXT NOT NULL,
+        UNIQUE(user_id, name)
       )`,
       args: [],
     },

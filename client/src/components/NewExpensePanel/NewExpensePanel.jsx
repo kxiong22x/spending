@@ -3,10 +3,11 @@ import { API } from '../../constants/constants';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewExpensePanel.module.css';
 
-export default function NewExpensePanel({ allCategoryNames, onAddTransaction, defaultDate }) {
+export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTransaction, defaultDate }) {
   const [date, setDate] = useState(defaultDate);
   const [desc, setDesc] = useState('');
   const [category, setCategory] = useState(allCategoryNames[0] ?? '');
+  const [cardId, setCardId] = useState(cards[0]?.id ?? null);
   const [amount, setAmount] = useState('');
   const [txError, setTxError] = useState(null);
   const [txSaving, setTxSaving] = useState(false);
@@ -29,7 +30,7 @@ export default function NewExpensePanel({ allCategoryNames, onAddTransaction, de
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, description: desc.trim(), category, amount: parsedAmount }),
+        body: JSON.stringify({ date, description: desc.trim(), category, amount: parsedAmount, card_id: cardId }),
       });
       const data = await res.json();
       if (!res.ok) { setTxError(data.error || 'Failed to add transaction'); return; }
@@ -71,6 +72,17 @@ export default function NewExpensePanel({ allCategoryNames, onAddTransaction, de
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        {cards.length > 0 && (
+          <select
+            value={cardId ?? ''}
+            onChange={e => setCardId(Number(e.target.value))}
+            className={panelStyles.panelInput}
+          >
+            {cards.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
         <input
           type="number"
           step="0.01"

@@ -21,4 +21,17 @@ export const PIE_COLORS = [
   "#88acab"
 ];
 
+export const CARD_PIE_COLORS = [
+  "#c4b8d4",
+  "#8ab5b0",
+  "#d4a8b8",
+  "#b5c9b5",
+  "#a8b4d4",
+  "#c9bba8",
+  "#b8c4a0",
+  "#c4b080",
+  "#d4b8b0",
+  "#a8c4c4",
+];
+
 export const CATEGORY_ORDER = ['dining', 'groceries', 'shopping', 'entertainment', 'transportation', 'other'];

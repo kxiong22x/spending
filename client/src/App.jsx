@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import MonthPage from './pages/MonthPage/MonthPage';
+import MyCards from './pages/MyCards/MyCards';
 import Header from './components/Header/Header';
 import { API } from './constants/constants';
 
@@ -45,6 +46,10 @@ export default function App() {
         <Route
           path="/month/:yearMonth"
           element={user ? <MonthPage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/cards"
+          element={user ? <MyCards /> : <Navigate to="/login" replace />}
         />
       </Routes>
     </>

@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const monthsRoutes = require('./routes/months');
 const transactionsRoutes = require('./routes/transactions');
 const categoriesRoutes = require('./routes/categories');
+const cardsRoutes = require('./routes/cards');
 
 // Fail fast if any required secret is missing or too short to be safe
 const REQUIRED_ENV_VARS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'JWT_SECRET', 'GOOGLE_AI_API_KEY', 'TURSO_URL', 'TURSO_AUTH_TOKEN'];
@@ -72,6 +73,8 @@ const writeRateLimit = rateLimit({
 app.post('/transactions', writeRateLimit);
 app.post('/categories', writeRateLimit);
 app.delete('/categories/:name', writeRateLimit);
+app.post('/cards', writeRateLimit);
+app.delete('/cards/:id', writeRateLimit);
 
 // Very tight limit on account deletion to prevent abuse
 const accountDeleteLimiter = rateLimit({
@@ -90,6 +93,7 @@ app.use('/auth', authRoutes);
 app.use('/months', monthsRoutes);
 app.use('/transactions', transactionsRoutes);
 app.use('/categories', categoriesRoutes);
+app.use('/cards', cardsRoutes);
 
 // Centralized error handler — must have 4 parameters so Express treats it as an error handler
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

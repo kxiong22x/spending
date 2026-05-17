@@ -1,6 +1,7 @@
 import styles from './CategoryColumn.module.css';
 
-export default function CategoryColumn({ cat, color, isDragOver, isCustom, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDeleteCategory, onDeleteTransaction }) {
+export default function CategoryColumn({ cat, color, isDragOver, isCustom, highlightedTxIds, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDeleteCategory, onDeleteTransaction }) {
+  const hasHighlight = highlightedTxIds?.size > 0;
   return (
     <div
       className={`${styles.categoryCol} ${isDragOver ? styles.categoryColOver : ''}`}
@@ -21,13 +22,16 @@ export default function CategoryColumn({ cat, color, isDragOver, isCustom, onDra
           >✕</button>
         )}
       </div>
-      {cat.txs.map(tx => (
+      {cat.txs.map(tx => {
+        const isHighlighted = hasHighlight && highlightedTxIds.has(tx.id);
+        const isDimmed = hasHighlight && !highlightedTxIds.has(tx.id);
+        return (
         <div
           key={tx.id}
           draggable
           onDragStart={() => onDragStart(tx)}
           onDragEnd={onDragEnd}
-          className={styles.txRow}
+          className={`${styles.txRow} ${isHighlighted ? styles.txHighlighted : ''} ${isDimmed ? styles.txDimmed : ''}`}
         >
           <div className={styles.txTopRow}>
             <span className={styles.txDate}>{tx.date}</span>
@@ -43,7 +47,8 @@ export default function CategoryColumn({ cat, color, isDragOver, isCustom, onDra
           </div>
           <span className={styles.txDesc}>{tx.description || '—'}</span>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -20,11 +20,14 @@ export default function Header({ user, onLogout, onDeleteAccount }) {
         <span className={styles.userName} onClick={() => setOpen(o => !o)}>{user.name}</span>
         {open && (
           <div className={styles.dropdown}>
+            <button onClick={() => { setOpen(false); navigate('/cards'); }} className={styles.dropdownItem}>
+              My Cards
+            </button>
             <button onClick={() => { setOpen(false); onLogout(); }} className={styles.dropdownItem}>
-              Sign out
+              Sign Out
             </button>
             <button onClick={() => { setOpen(false); onDeleteAccount(); }} className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}>
-              Delete account
+              Delete Account
             </button>
           </div>
         )}
