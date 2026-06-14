@@ -35,6 +35,17 @@ export default function MyCards() {
   return (
     <main className={styles.container}>
       <h2>My Cards</h2>
+      <p className={styles.rewardsText}>
+        <a
+          href="https://docs.google.com/spreadsheets/d/1Hk-Mzj5itLhrVHvzJ6AZ1Y_6R5UcS7jdyktlymLgm7Q/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.rewardsLink}
+        >
+          Link
+        </a>
+        {' to credit card rewards and airline partners'}
+      </p>
       <form onSubmit={handleRegister} className={styles.form}>
         <input
           className={styles.input}

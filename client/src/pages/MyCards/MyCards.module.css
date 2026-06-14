@@ -64,3 +64,17 @@
 .deleteBtn:hover {
   text-decoration: underline;
 }
+
+.rewardsText {
+  padding: 0.5rem 0;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.rewardsLink {
+  color: var(--primary);
+  text-decoration: underline;
+  font-weight: bold;
+}
