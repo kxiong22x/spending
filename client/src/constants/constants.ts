@@ -1,0 +1,43 @@
+import shared from '@shared/constants.json';
+
+export const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+export const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export const CURRENT_YEAR = new Date().getFullYear();
+export const CURRENT_MONTH = String(new Date().getMonth() + 1).padStart(2, '0');
+export const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i);
+
+export const PIE_COLORS = [
+  "#5f9595",
+  "#fdbaa8",
+  "#e8d87a",
+  "#abb8bd",
+  "#f2b8b8",
+  "#c8d6d3",
+  "#f0a96a",
+  "#e8cdd4",
+  "#88acab",
+  "#f5e6ea"
+];
+
+export const CARD_PIE_COLORS = [
+  "#c8b09a",
+  "#a0b8a8",
+  "#c0cc9a",
+  "#d4b0b8",
+  "#b8c8a0",
+  "#a888b0",
+  "#d8cc9e",
+  "#c8a8bc",
+  "#c8a0c0",
+  "#98b898"
+];
+
+// Sourced from shared/constants.json — must match server values
+export const CATEGORY_ORDER: string[] = shared.BUILTIN_CATEGORIES;
+export const MAX_NAME_LENGTH: number = shared.MAX_NAME_LENGTH;
+export const YEAR_MONTH_REGEX = new RegExp(shared.YEAR_MONTH_PATTERN);
