@@ -5,3 +5,4 @@ CLAUDE.md
 .DS_Store
 server/dist/
 server/shared/
+client/dist/

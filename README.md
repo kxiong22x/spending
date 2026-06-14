@@ -18,8 +18,8 @@ A personal finance web app for uploading, categorizing, and visualizing your mon
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, React Router v6, Vite |
-| Backend | Node.js, Express 4 |
+| Frontend | React 18, React Router v6, Vite, TypeScript |
+| Backend | Node.js, Express 4, TypeScript |
 | Database | SQLite (Turso cloud) via `@libsql/client` |
 | Auth | Google OAuth 2.0, JWT (HTTP-only cookies) |
 | AI | Google Gemini 2.5 Flash |
@@ -28,19 +28,24 @@ A personal finance web app for uploading, categorizing, and visualizing your mon
 
 ```
 spending/
+├── shared/          # Types and constants shared between client and server
+│   ├── types.ts         # Shared TypeScript interfaces
+│   └── constants.json   # Shared constants (categories, validation patterns)
 ├── client/          # React + Vite frontend
 │   └── src/
 │       ├── pages/       # Login, Dashboard, MonthPage, MyCards
 │       ├── components/  # UI components
-│       ├── constants/   # Shared constants (colors, category order, API URL)
+│       ├── constants/   # Client constants (colors, category order, API URL)
 │       ├── hooks/       # Data-fetching hooks
 │       └── utils/       # CSV parsing, formatting helpers
 └── server/          # Express backend
     ├── routes/      # auth, transactions, categories, months, cards
     ├── middleware/  # JWT auth guard
-    ├── classify.js  # Gemini classification + keyword fallback
-    ├── db.js        # Turso client + schema setup
-    └── passport.js  # Google OAuth strategy
+    ├── classify.ts  # Gemini classification + keyword fallback
+    ├── constants.ts # Server-side constants
+    ├── db.ts        # Turso client + schema setup
+    ├── passport.ts  # Google OAuth strategy
+    └── types.d.ts   # Express type augmentations
 ```
 
 ## Getting Started
@@ -119,6 +124,7 @@ All endpoints except `/auth/google` require authentication via JWT cookie.
 
 | Method | Path | Description |
 |---|---|---|
+| `GET` | `/ping` | Health check |
 | `GET` | `/auth/google` | Initiate Google OAuth flow |
 | `GET` | `/auth/me` | Get current user |
 | `POST` | `/auth/logout` | Log out |
