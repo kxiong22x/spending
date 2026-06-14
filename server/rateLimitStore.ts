@@ -5,7 +5,7 @@ import type { Store, Options, ClientRateLimitInfo } from 'express-rate-limit';
 export class TursoRateLimitStore implements Store {
   private windowMs = 60_000;
 
-  constructor(private readonly prefix: string) {}
+  constructor(private readonly namespace: string) {}
 
   init(options: Options): void {
     this.windowMs = options.windowMs;
@@ -14,7 +14,7 @@ export class TursoRateLimitStore implements Store {
   async increment(key: string): Promise<ClientRateLimitInfo> {
     const now = Date.now();
     const newReset = now + this.windowMs;
-    const prefixedKey = `${this.prefix}:${key}`;
+    const prefixedKey = `${this.namespace}:${key}`;
 
     const result = await db.execute({
       sql: `INSERT INTO rate_limits (key, hits, reset_time) VALUES (?, 1, ?)
@@ -35,14 +35,14 @@ export class TursoRateLimitStore implements Store {
   async decrement(key: string): Promise<void> {
     await db.execute({
       sql: 'UPDATE rate_limits SET hits = MAX(0, hits - 1) WHERE key = ?',
-      args: [`${this.prefix}:${key}`],
+      args: [`${this.namespace}:${key}`],
     });
   }
 
   async resetKey(key: string): Promise<void> {
     await db.execute({
       sql: 'DELETE FROM rate_limits WHERE key = ?',
-      args: [`${this.prefix}:${key}`],
+      args: [`${this.namespace}:${key}`],
     });
   }
 }
