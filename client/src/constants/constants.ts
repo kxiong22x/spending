@@ -25,16 +25,16 @@ export const PIE_COLORS = [
 ];
 
 export const CARD_PIE_COLORS = [
-  "#c8b09a",
-  "#a0b8a8",
-  "#c0cc9a",
-  "#d4b0b8",
-  "#b8c8a0",
-  "#a888b0",
-  "#d8cc9e",
-  "#c8a8bc",
-  "#c8a0c0",
-  "#98b898"
+  "#a8a4aa", // gray mid-light
+  "#6d4d67", // mauve mid-dark
+  "#d0cdd1", // gray light
+  "#82607b", // mauve mid
+  "#38353a", // gray dark
+  "#c9b5c5", // mauve light
+  "#5e5b60", // gray mid-dark
+  "#a888a0", // mauve mid-light
+  "#807c82", // gray mid
+  "#40283c", // mauve dark
 ];
 
 // Sourced from shared/constants.json — must match server values

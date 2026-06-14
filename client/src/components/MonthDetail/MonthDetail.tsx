@@ -1,10 +1,13 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatMonth, formatDollar } from '../../utils/format';
 import useMonthData from '../../hooks/useMonthData';
 import { useCards } from '../../hooks/useCards';
 import { useCardSpending } from '../../hooks/useCardSpending';
+import { useCategoryHighlight } from '../../hooks/useCategoryHighlight';
 import { useMonthNavigation } from '../../hooks/useMonthNavigation';
 import PieChart from '../PieChart/PieChart';
+import HorizontalBarChart from '../HorizontalBarChart/HorizontalBarChart';
 import CategoryColumn from '../CategoryColumn/CategoryColumn';
 import NewCategoryPanel from '../NewCategoryPanel/NewCategoryPanel';
 import NewExpensePanel from '../NewExpensePanel/NewExpensePanel';
@@ -39,8 +42,14 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
   } = useMonthData(yearMonth);
 
   const { cards } = useCards();
-  const { cardColorMap, cardsWithSpending, highlightedTxIds, onCardHover } = useCardSpending(transactions, cards);
+  const { cardColorMap, cardsWithSpending, highlightedTxIds: cardHighlightedTxIds, onCardHover } = useCardSpending(transactions, cards);
+  const { categoryHighlightedTxIds, onCategoryHover } = useCategoryHighlight(transactions);
   const { prevMonth, nextMonth } = useMonthNavigation(yearMonth);
+
+  const highlightedTxIds = useMemo(() => {
+    if (cardHighlightedTxIds.size > 0) return cardHighlightedTxIds;
+    return categoryHighlightedTxIds;
+  }, [cardHighlightedTxIds, categoryHighlightedTxIds]);
 
   return (
     <div className={styles.detailContainer}>
@@ -59,12 +68,12 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
             <div className={styles.pieRow}>
               {categoriesWithTxs.length > 0 && (
                 <div className={styles.pieCell}>
-                  <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} />
+                  <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} onSliceHover={onCategoryHover} />
                 </div>
               )}
               {cardsWithSpending.length > 0 && (
                 <div className={styles.pieCell}>
-                  <PieChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={onCardHover} />
+                  <HorizontalBarChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={onCardHover} />
                 </div>
               )}
             </div>
