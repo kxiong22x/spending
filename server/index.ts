@@ -9,6 +9,7 @@ import { rateLimit } from 'express-rate-limit';
 
 import './passport'; // register Google strategy
 import { initDb } from './db';
+import { TursoRateLimitStore } from './rateLimitStore';
 import authRoutes from './routes/auth';
 import monthsRoutes from './routes/months';
 import transactionsRoutes from './routes/transactions';
@@ -31,6 +32,7 @@ if (process.env.JWT_SECRET.length < 32) {
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+app.set('trust proxy', 1);
 app.use(helmet());
 const clientOrigin = new URL(process.env.CLIENT_URL || 'http://localhost:5173').origin;
 app.use(cors({
@@ -39,7 +41,7 @@ app.use(cors({
 }));
 
 // Higher body limit for CSV upload rows; tight limit everywhere else
-app.use('/transactions/upload', express.json({ limit: '2mb' }));
+app.use('/api/transactions/upload', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -50,15 +52,17 @@ app.use(rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new TursoRateLimitStore('general'),
   message: { error: 'Too many requests, please try again later.' },
 }));
 
 // Tighter limit on the upload endpoint to guard against Gemini API cost
-app.use('/transactions/upload', rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+app.use('/api/transactions/upload', rateLimit({
+  windowMs: 60 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new TursoRateLimitStore('upload'),
   message: { error: 'Upload limit reached. Please wait before uploading again.' },
 }));
 
@@ -68,13 +72,14 @@ const writeRateLimit = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new TursoRateLimitStore('write'),
   message: { error: 'Too many requests, please try again later.' },
 });
-app.post('/transactions', writeRateLimit);
-app.post('/categories', writeRateLimit);
-app.delete('/categories/:name', writeRateLimit);
-app.post('/cards', writeRateLimit);
-app.delete('/cards/:id', writeRateLimit);
+app.post('/api/transactions', writeRateLimit);
+app.post('/api/categories', writeRateLimit);
+app.delete('/api/categories/:name', writeRateLimit);
+app.post('/api/cards', writeRateLimit);
+app.delete('/api/cards/:id', writeRateLimit);
 
 // Very tight limit on account deletion to prevent abuse
 const accountDeleteLimiter = rateLimit({
@@ -82,18 +87,19 @@ const accountDeleteLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: new TursoRateLimitStore('account-delete'),
   message: { error: 'Too many requests, please try again later.' },
 });
-app.delete('/auth/account', accountDeleteLimiter);
+app.delete('/api/auth/account', accountDeleteLimiter);
 
 // Health check endpoint for uptime monitoring
-app.get('/ping', (req: Request, res: Response) => res.sendStatus(200));
+app.get('/api/ping', (req: Request, res: Response) => res.sendStatus(200));
 
-app.use('/auth', authRoutes);
-app.use('/months', monthsRoutes);
-app.use('/transactions', transactionsRoutes);
-app.use('/categories', categoriesRoutes);
-app.use('/cards', cardsRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/months', monthsRoutes);
+app.use('/api/transactions', transactionsRoutes);
+app.use('/api/categories', categoriesRoutes);
+app.use('/api/cards', cardsRoutes);
 
 // Centralized error handler — must have 4 parameters so Express treats it as an error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -102,14 +108,17 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: 'An unexpected error occurred' });
 });
 
-async function start(): Promise<void> {
-  await initDb();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+export default app;
+
+if (!process.env.VERCEL) {
+  async function start(): Promise<void> {
+    await initDb();
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+  start().catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }
-
-start().catch(err => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});

@@ -72,6 +72,14 @@ async function initDb(): Promise<void> {
       )`,
       args: [],
     },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS rate_limits (
+        key        TEXT    PRIMARY KEY,
+        hits       INTEGER NOT NULL DEFAULT 0,
+        reset_time INTEGER NOT NULL DEFAULT 0
+      )`,
+      args: [],
+    },
   ], 'write');
 }
 

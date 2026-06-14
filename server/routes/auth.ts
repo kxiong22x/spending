@@ -10,8 +10,7 @@ const router = express.Router();
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,                                          // JS cannot read this cookie
   secure: process.env.NODE_ENV === 'production',          // HTTPS only in production
-  // 'none' required in production: client and server are on different domains (cross-origin)
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
   maxAge: 7 * 24 * 60 * 60 * 1000,                       // 7 days
 };
 
