@@ -8,7 +8,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "moduleResolution": "Node",
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "outDir": "dist"
   },
   "include": ["./**/*.ts"],
   "exclude": ["node_modules"]
