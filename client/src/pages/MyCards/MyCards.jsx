@@ -24,10 +24,11 @@ export default function MyCards() {
   }
 
   async function handleDelete(id) {
+    setError('');
     try {
       await deleteCard(id);
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
     }
   }
 

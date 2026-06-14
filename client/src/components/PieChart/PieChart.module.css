@@ -1,6 +1,64 @@
 .chartWrap {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   margin: 0.5rem auto 0.75rem;
-  max-width: 520px;
+  max-width: 600px;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.pieAndLegend {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pieWrap {
+  flex: 0 0 220px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+}
+
+.swatch {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.legendName {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #333;
+}
+
+.legendAmount {
+  font-size: 0.78rem;
+  color: #444;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.legendPct {
+  font-size: 0.75rem;
+  color: #777;
+  white-space: nowrap;
 }

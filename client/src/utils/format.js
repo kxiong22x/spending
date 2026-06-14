@@ -8,3 +8,8 @@ export function formatMonth(yearMonth) {
 export function formatDollar(amount) {
   return `$${amount.toFixed(2)}`;
 }
+
+// Formats a fraction as a percentage string with one decimal place (e.g. 0.333 → "33.3%").
+export function formatPercent(fraction) {
+  return `${(fraction * 100).toFixed(1)}%`;
+}

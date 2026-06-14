@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { parseCSV } from '../../utils/csv';
-import { API, CURRENT_YEAR } from '../../constants/constants';
+import { Link } from 'react-router-dom';
+import { parseFilesForCards } from '../../utils/csv';
+import { uploadMonth } from '../../hooks/useMonths';
+import { CURRENT_YEAR, CURRENT_MONTH } from '../../constants/constants';
 import { useCards } from '../../hooks/useCards';
 import MonthPicker from '../MonthPicker/MonthPicker';
 import CsvDropzone from '../CsvDropzone/CsvDropzone';
@@ -8,7 +10,7 @@ import UploadErrors from '../UploadErrors/UploadErrors';
 import styles from './NewMonthForm.module.css';
 
 export default function NewMonthForm({ onSuccess }) {
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [month, setMonth] = useState(CURRENT_MONTH);
   const [year, setYear]   = useState(String(CURRENT_YEAR));
   // cardFiles maps cardId (number) -> File[]
   const [cardFiles, setCardFiles] = useState({});
@@ -36,7 +38,6 @@ export default function NewMonthForm({ onSuccess }) {
 
     const yearMonth = `${year}-${month}`;
 
-    // Check for cards with no files uploaded
     if (!force) {
       const missing = cards.filter(c => !cardFiles[c.id] || cardFiles[c.id].length === 0);
       if (missing.length > 0) {
@@ -46,51 +47,7 @@ export default function NewMonthForm({ onSuccess }) {
       }
     }
 
-    const fileResults = [];
-    const cardRows = [];
-    let totalParseErrors = 0;
-
-    // Parse files for each card
-    for (const card of cards) {
-      const files = cardFiles[card.id] ?? [];
-      if (files.length === 0) continue;
-
-      const cardRowsForCard = [];
-      let cardHasError = false;
-
-      for (const file of files) {
-        let text;
-        try {
-          text = await file.text();
-        } catch {
-          fileResults.push({ file: file.name, error: 'Could not read file.' });
-          cardHasError = true;
-          break;
-        }
-
-        const { rows: parsed, parseErrors, error: parseError } = parseCSV(text);
-        if (parseError) {
-          fileResults.push({ file: file.name, error: parseError });
-          cardHasError = true;
-          break;
-        }
-
-        const rows = parsed.filter(r => r.date.startsWith(yearMonth));
-        if (rows.length === 0) {
-          fileResults.push({ file: file.name, error: `No transactions found for ${yearMonth} in ${file.name}.` });
-          cardHasError = true;
-          break;
-        }
-
-        cardRowsForCard.push(...rows);
-        totalParseErrors += parseErrors;
-      }
-
-      if (cardHasError) continue;
-      if (cardRowsForCard.length > 0) {
-        cardRows.push({ cardId: card.id, rows: cardRowsForCard });
-      }
-    }
+    const { fileResults, cardRows, totalParseErrors } = await parseFilesForCards(cards, cardFiles, yearMonth);
 
     if (fileResults.some(r => r.error)) {
       setStatus({ results: fileResults, yearMonth });
@@ -103,23 +60,12 @@ export default function NewMonthForm({ onSuccess }) {
     }
 
     try {
-      const res = await fetch(`${API}/transactions/upload`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: yearMonth, cardRows }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus({ results: [{ file: '—', error: data.error || 'Upload failed.' }], yearMonth });
-        return;
-      }
+      const data = await uploadMonth(yearMonth, cardRows);
       const allFileNames = cards.flatMap(c => (cardFiles[c.id] ?? []).map(f => f.name)).join(', ');
-      const results = [{ file: allFileNames, ...data, parseErrors: totalParseErrors }];
-      setStatus({ results, yearMonth });
+      setStatus({ results: [{ file: allFileNames, ...data, parseErrors: totalParseErrors }], yearMonth });
       onSuccess(yearMonth);
-    } catch {
-      setStatus({ results: [{ file: '—', error: 'Upload failed. Is the server running?' }], yearMonth });
+    } catch (err) {
+      setStatus({ results: [{ file: '—', error: err.message || 'Upload failed. Is the server running?' }], yearMonth });
     }
   }
 
@@ -140,7 +86,7 @@ export default function NewMonthForm({ onSuccess }) {
       {cardsLoading ? (
         <p>Loading cards…</p>
       ) : cards.length === 0 ? (
-        <p className={styles.noCards}>No cards registered. <a href="/spending/cards">Add a card</a> before creating a month.</p>
+        <p className={styles.noCards}>No cards registered. <Link to="/cards">Add a card</Link> before creating a month.</p>
       ) : (
         <div className={styles.cardRows}>
           {cards.map(card => (

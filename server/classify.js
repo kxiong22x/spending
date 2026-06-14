@@ -13,7 +13,7 @@ function keywordFallback(description) {
   for (const [category, keywords] of Object.entries(KEYWORDS)) {
     if (keywords.some(kw => desc.includes(kw))) return category;
   }
-  return 'other';
+  return 'Other';
 }
 
 // Returns today's date as a YYYY-MM-DD string.
@@ -107,7 +107,7 @@ async function classifyWithGemini(transactions) {
     .join('\n');
 
   const prompt = `Classify each credit card transaction below into exactly one of these categories:
-dining, groceries, shopping, entertainment, transportation, other
+${BUILTIN_CATEGORIES.join(', ')}
 
 Rules:
 - If a bank category hint is provided, use it as a signal but let the description take priority
@@ -133,7 +133,7 @@ ${lines}`;
       throw new Error('Unexpected response length from Gemini');
     }
 
-    return categories.map(c => (BUILTIN_CATEGORIES.includes(c) ? c : 'other'));
+    return categories.map(c => (BUILTIN_CATEGORIES.includes(c) ? c : 'Other'));
   } catch (err) {
     console.error('Gemini classification failed, falling back to keywords:', err.message);
     return transactions.map(t => keywordFallback(t.description));

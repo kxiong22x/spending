@@ -1,10 +1,10 @@
-export const DATE_ALIASES        = ['date', 'transaction date', 'trans. date', 'posted date', 'post date'];
-export const AMOUNT_ALIASES      = ['amount', 'debit', 'transaction amount', 'charge amount'];
-export const DESCRIPTION_ALIASES = ['description', 'original description', 'memo', 'payee', 'merchant', 'name'];
-export const CATEGORY_ALIASES    = ['category'];
+const DATE_ALIASES        = ['date', 'transaction date', 'trans. date', 'posted date', 'post date'];
+const AMOUNT_ALIASES      = ['amount', 'debit', 'transaction amount', 'charge amount'];
+const DESCRIPTION_ALIASES = ['description', 'original description', 'memo', 'payee', 'merchant', 'name'];
+const CATEGORY_ALIASES    = ['category'];
 
 // Substrings that identify credit card payment rows, which should be excluded from spending data.
-export const AUTOPAY_PATTERNS = [
+const AUTOPAY_PATTERNS = [
   'autopay',
   'automatic payment',
   'online payment',
@@ -21,7 +21,7 @@ export const AUTOPAY_PATTERNS = [
 ];
 
 // Splits a single CSV line into fields, correctly handling quoted fields and escaped quotes.
-export function parseLine(line) {
+function parseLine(line) {
   const fields = [];
   let cur = '';
   let inQuotes = false;
@@ -42,7 +42,7 @@ export function parseLine(line) {
 }
 
 // Normalizes M/D/YY, M/D/YYYY, or YYYY-MM-DD date strings to YYYY-MM-DD; returns null on failure.
-export function normaliseDate(raw) {
+function normaliseDate(raw) {
   const s = raw.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
@@ -55,13 +55,13 @@ export function normaliseDate(raw) {
 }
 
 // Strips leading "$" and commas from a string and converts it to a float.
-export function parseAmount(raw) {
+function parseAmount(raw) {
   const cleaned = raw.trim().replace(/^\$/, '').replace(/,/g, '');
   return parseFloat(cleaned);
 }
 
 // Returns the index of the first header that matches any alias, or -1 if none match.
-export function findCol(headers, aliases) {
+function findCol(headers, aliases) {
   for (const alias of aliases) {
     const idx = headers.indexOf(alias);
     if (idx !== -1) return idx;
@@ -92,10 +92,7 @@ export function parseCSV(text) {
     const amount = parseAmount(fields[amountIdx]   ?? '');
     if (!date || isNaN(amount)) { parseErrors++; continue; }
     const desc = descriptionIdx !== -1 ? (fields[descriptionIdx] ?? '').toLowerCase() : '';
-    if (AUTOPAY_PATTERNS.some(p => desc.includes(p))) {
-      console.log('[csv] skipped autopay row:', fields[descriptionIdx] ?? '(no description)');
-      continue;
-    }
+    if (AUTOPAY_PATTERNS.some(p => desc.includes(p))) continue;
     rows.push({
       date,
       amount,
@@ -112,4 +109,52 @@ export function parseCSV(text) {
   }
 
   return { rows, parseErrors };
+}
+
+// Reads and parses CSV files for each card, returning structured row data or file-level errors.
+export async function parseFilesForCards(cards, cardFiles, yearMonth) {
+  const fileResults = [];
+  const cardRows = [];
+  let totalParseErrors = 0;
+
+  for (const card of cards) {
+    const files = cardFiles[card.id] ?? [];
+    if (files.length === 0) continue;
+
+    const cardRowsForCard = [];
+    let cardHasError = false;
+
+    for (const file of files) {
+      let text;
+      try {
+        text = await file.text();
+      } catch {
+        fileResults.push({ file: file.name, error: 'Could not read file.' });
+        cardHasError = true;
+        break;
+      }
+
+      const { rows: parsed, parseErrors, error: parseError } = parseCSV(text);
+      if (parseError) {
+        fileResults.push({ file: file.name, error: parseError });
+        cardHasError = true;
+        break;
+      }
+
+      const rows = parsed.filter(r => r.date.startsWith(yearMonth));
+      if (rows.length === 0) {
+        fileResults.push({ file: file.name, error: `No transactions found for ${yearMonth} in ${file.name}.` });
+        cardHasError = true;
+        break;
+      }
+
+      cardRowsForCard.push(...rows);
+      totalParseErrors += parseErrors;
+    }
+
+    if (cardHasError) continue;
+    if (cardRowsForCard.length > 0) cardRows.push({ cardId: card.id, rows: cardRowsForCard });
+  }
+
+  return { fileResults, cardRows, totalParseErrors };
 }

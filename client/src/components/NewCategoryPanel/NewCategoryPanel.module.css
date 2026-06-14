@@ -1,5 +1,11 @@
 .newCatForm {
   display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.inputRow {
+  display: flex;
   gap: 0.375rem;
 }
 

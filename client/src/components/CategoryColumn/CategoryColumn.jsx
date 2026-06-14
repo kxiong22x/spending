@@ -23,7 +23,7 @@ export default function CategoryColumn({ cat, color, isDragOver, isCustom, highl
           >✕</button>
         )}
       </div>
-      {cat.txs.map(tx => {
+      {[...cat.txs].sort((a, b) => (a.description || '').localeCompare(b.description || '')).map(tx => {
         const isHighlighted = hasHighlight && highlightedTxIds.has(tx.id);
         const isDimmed = hasHighlight && !highlightedTxIds.has(tx.id);
         return (

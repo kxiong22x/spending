@@ -7,6 +7,10 @@ import MyCards from './pages/MyCards/MyCards';
 import Header from './components/Header/Header';
 import { API } from './constants/constants';
 
+function ProtectedRoute({ user, children }) {
+  return user ? children : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   // undefined = still checking auth, null = not logged in, object = logged in
   const [user, setUser] = useState(undefined);
@@ -41,15 +45,15 @@ export default function App() {
         />
         <Route
           path="/"
-          element={user ? <Dashboard /> : <Navigate to="/login" replace />}
+          element={<ProtectedRoute user={user}><Dashboard /></ProtectedRoute>}
         />
         <Route
           path="/month/:yearMonth"
-          element={user ? <MonthPage /> : <Navigate to="/login" replace />}
+          element={<ProtectedRoute user={user}><MonthPage /></ProtectedRoute>}
         />
         <Route
           path="/cards"
-          element={user ? <MyCards /> : <Navigate to="/login" replace />}
+          element={<ProtectedRoute user={user}><MyCards /></ProtectedRoute>}
         />
       </Routes>
     </>

@@ -1,3 +1,5 @@
+import shared from '@shared/constants.json';
+
 export const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const MONTHS = [
@@ -6,35 +8,36 @@ export const MONTHS = [
 ];
 
 export const CURRENT_YEAR = new Date().getFullYear();
+export const CURRENT_MONTH = String(new Date().getMonth() + 1).padStart(2, '0');
 export const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i);
 
 export const PIE_COLORS = [
-  "#c8d6d3",
   "#5f9595",
   "#fdbaa8",
-  "#f5d0c3",
-  "#efbb68",
+  "#e8d87a",
   "#abb8bd",
-  "#f9d08c",
-  "#f9e3de",
-  "#f4dcce",
-  "#88acab"
+  "#f2b8b8",
+  "#c8d6d3",
+  "#f0a96a",
+  "#e8cdd4",
+  "#88acab",
+  "#f5e6ea"
 ];
 
 export const CARD_PIE_COLORS = [
-  "#c4b8d4",
-  "#8ab5b0",
-  "#d4a8b8",
-  "#b5c9b5",
-  "#a8b4d4",
-  "#c9bba8",
-  "#b8c4a0",
-  "#c4b080",
-  "#d4b8b0",
-  "#a8c4c4",
+  "#c8b09a",
+  "#a0b8a8",
+  "#c0cc9a",
+  "#d4b0b8",
+  "#b8c8a0",
+  "#a888b0",
+  "#d8cc9e",
+  "#c8a8bc",
+  "#c8a0c0",
+  "#98b898"
 ];
 
-export const CATEGORY_ORDER = ['dining', 'groceries', 'shopping', 'entertainment', 'transportation', 'other'];
-
-// Must stay in sync with MAX_NAME_LENGTH in server/constants.js.
-export const MAX_NAME_LENGTH = 50;
+// Sourced from shared/constants.json — must match server values
+export const CATEGORY_ORDER = shared.BUILTIN_CATEGORIES;
+export const MAX_NAME_LENGTH = shared.MAX_NAME_LENGTH;
+export const YEAR_MONTH_REGEX = new RegExp(shared.YEAR_MONTH_PATTERN);

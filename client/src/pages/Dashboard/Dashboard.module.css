@@ -1,8 +1,5 @@
-.container {
-  min-height: 100vh;
-}
-
 .main {
+  min-height: 100vh;
   padding: 2rem;
   display: flex;
   flex-direction: column;
@@ -11,11 +8,6 @@
 }
 
 .newBtn {
+  composes: primaryBtn from '../../styles/shared.module.css';
   padding: 0.625rem 1.25rem;
-  cursor: pointer;
-  border-radius: 0.25rem;
-  border: none;
-  background-color: var(--primary);
-  color: #fff;
-  font-weight: 600;
 }

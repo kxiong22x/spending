@@ -1,7 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
 const requireAuth = require('../middleware/requireAuth');
-const { BUILTIN_CATEGORIES_SET, MONTH_REGEX, MAX_NAME_LENGTH } = require('../constants');
+const { BUILTIN_CATEGORIES_LOWER_SET, MONTH_REGEX, MAX_NAME_LENGTH } = require('../constants');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -28,7 +28,7 @@ router.post('/', async (req, res, next) => {
   const name = raw.trim();
   if (!name) return res.status(400).json({ error: 'name must not be empty' });
   if (name.length > MAX_NAME_LENGTH) return res.status(400).json({ error: `name must be ${MAX_NAME_LENGTH} characters or fewer` });
-  if (BUILTIN_CATEGORIES_SET.has(name.toLowerCase())) return res.status(400).json({ error: `"${name}" is a built-in category` });
+  if (BUILTIN_CATEGORIES_LOWER_SET.has(name.toLowerCase())) return res.status(400).json({ error: `"${name}" is a built-in category` });
   if (!month || !MONTH_REGEX.test(month)) return res.status(400).json({ error: 'month is required (YYYY-MM)' });
 
   const recurring = is_recurring === false ? 0 : 1;
@@ -51,7 +51,7 @@ router.delete('/:name', async (req, res) => {
   const name = req.params.name;
   const { month } = req.query;
 
-  if (BUILTIN_CATEGORIES_SET.has(name.toLowerCase())) {
+  if (BUILTIN_CATEGORIES_LOWER_SET.has(name.toLowerCase())) {
     return res.status(400).json({ error: 'Cannot delete a built-in category' });
   }
   if (!month || !MONTH_REGEX.test(month)) {
@@ -71,7 +71,7 @@ router.delete('/:name', async (req, res) => {
     }
 
     await txn.execute({
-      sql: `UPDATE transactions SET category = 'other' WHERE user_id = ? AND category = ? AND strftime('%Y-%m', date) = ?`,
+      sql: `UPDATE transactions SET category = 'Other' WHERE user_id = ? AND category = ? AND strftime('%Y-%m', date) = ?`,
       args: [req.user.id, name, month],
     });
 

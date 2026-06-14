@@ -34,9 +34,6 @@ export default function CsvDropzone({ files, onFilesAdded, onFileRemoved }) {
         onDrop={handleDrop}
         onClick={() => fileInputRef.current.click()}
       >
-        <p className={styles.dropzoneText}>
-          {dragging ? 'Drop files here' : 'Drag & drop CSV files here, or click to select'}
-        </p>
         <input
           ref={fileInputRef}
           type="file"
@@ -45,18 +42,21 @@ export default function CsvDropzone({ files, onFilesAdded, onFileRemoved }) {
           onChange={handleFileInput}
           style={{ display: 'none' }}
         />
+        {files.length > 0 ? (
+          <ul className={styles.fileList} onClick={e => e.stopPropagation()}>
+            {files.map(f => (
+              <li key={f.name} className={styles.fileItem}>
+                <span className={styles.fileName}>{f.name}</span>
+                <button onClick={() => onFileRemoved(f.name)} className={styles.removeBtn} aria-label={`Remove ${f.name}`}>✕</button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.dropzoneText}>
+            {dragging ? 'Drop files here' : 'Drag & drop CSV files here, or click to select'}
+          </p>
+        )}
       </div>
-
-      {files.length > 0 && (
-        <ul className={styles.fileList}>
-          {files.map(f => (
-            <li key={f.name} className={styles.fileItem}>
-              <span>{f.name}</span>
-              <button onClick={() => onFileRemoved(f.name)} className={styles.removeBtn} aria-label={`Remove ${f.name}`}>✕</button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

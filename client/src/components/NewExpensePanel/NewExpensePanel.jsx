@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { API } from '../../constants/constants';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewExpensePanel.module.css';
 
@@ -26,19 +25,11 @@ export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTra
     setTxSaving(true);
     setTxError(null);
     try {
-      const res = await fetch(`${API}/transactions`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, description: desc.trim(), category, amount: parsedAmount, card_id: cardId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setTxError(data.error || 'Failed to add transaction'); return; }
+      await onAddTransaction({ date, description: desc.trim(), category, amount: parsedAmount, card_id: cardId });
       setDesc('');
       setAmount('');
-      onAddTransaction(data);
-    } catch {
-      setTxError('Failed to add transaction');
+    } catch (err) {
+      setTxError(err.message || 'Failed to add transaction');
     } finally {
       setTxSaving(false);
     }

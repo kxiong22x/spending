@@ -7,20 +7,18 @@ export default function Dashboard() {
   const { months, deleteMonth } = useMonths();
   const navigate = useNavigate();
 
-  async function handleDeleteMonth(e, m) {
+  function handleDeleteMonth(e, m) {
     e.stopPropagation();
-    await deleteMonth(m);
+    deleteMonth(m);
   }
 
   return (
-    <div className={styles.container}>
-      <main className={styles.main}>
-        <button onClick={() => navigate('/month/new')} className={styles.newBtn}>
-          + New month
-        </button>
+    <main className={styles.main}>
+      <button onClick={() => navigate('/month/new')} className={styles.newBtn}>
+        + New month
+      </button>
 
-        <MonthList months={months} onDelete={handleDeleteMonth} />
-      </main>
-    </div>
+      <MonthList months={months} onDelete={handleDeleteMonth} />
+    </main>
   );
 }

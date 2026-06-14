@@ -1,5 +1,5 @@
 {
-  "dining": [
+  "Dining": [
     "restaurant", "cafe", "coffee", "starbucks", "mcdonald", "burger", "pizza",
     "sushi", "taco", "chipotle", "dunkin", "panera", "doordash", "grubhub",
     "ubereats", "diner", "grill", "kitchen", "bakery", "deli", "bbq", "ramen",
@@ -37,7 +37,7 @@
     "teavana", "kung fu tea", "gong cha", "happy lemon", "sharetea",
     "tiger sugar", "one zo", "presotea"
   ],
-  "groceries": [
+  "Groceries": [
     "grocery", "supermarket", "whole foods", "trader joe", "safeway", "kroger",
     "costco", "aldi", "publix", "wegmans", "food lion", "harris teeter",
     "sprouts", "h-e-b", "meijer", "fresh market", "stop & shop", "stop and shop",
@@ -68,7 +68,7 @@
     "grocery outlet", "winco foods", "sav-a-lot", "save a lot",
     "food max", "foodmaxx", "save-a-lot"
   ],
-  "shopping": [
+  "Shopping": [
     "amazon", "target", "walmart", "nordstrom", "macy", "gap", "h&m", "zara",
     "best buy", "ebay", "etsy", "nike", "adidas", "old navy", "ikea",
     "home depot", "lowe", "wayfair", "chewy", "petco", "petsmart",
@@ -117,7 +117,7 @@
     "thrift store", "goodwill", "salvation army", "savers", "value village",
     "depop", "poshmark", "thredup", "mercari", "offerup", "letgo"
   ],
-  "entertainment": [
+  "Entertainment": [
     "netflix", "hulu", "spotify", "disney", "hbo", "movie", "theater", "cinema",
     "concert", "ticketmaster", "stubhub", "steam", "playstation", "xbox",
     "museum", "amc", "regal", "youtube", "twitch", "paramount", "peacock",
@@ -167,7 +167,7 @@
     "bandai namco", "capcom", "sega", "konami", "take two",
     "chess.com", "lichess", "duolingo"
   ],
-  "transportation": [
+  "Transportation": [
     "uber", "lyft", "taxi", "metro", "transit", "gas", "exxon", "shell", "bp",
     "chevron", "mobil", "fuel", "airline", "delta", "united", "southwest",
     "jetblue", "parking", "toll", "amtrak", "zipcar", "hertz", "enterprise",

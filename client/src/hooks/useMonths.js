@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import { API } from '../constants/constants';
 import { formatMonth } from '../utils/format';
 
+// Uploads parsed card rows for a month to the server; throws on failure.
+export async function uploadMonth(yearMonth, cardRows) {
+  const res = await fetch(`${API}/transactions/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ month: yearMonth, cardRows }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Upload failed.');
+  return data;
+}
+
 export default function useMonths() {
   const [months, setMonths] = useState([]);
 

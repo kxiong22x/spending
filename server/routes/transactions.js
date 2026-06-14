@@ -152,7 +152,7 @@ router.post('/upload', async (req, res) => {
   // Reassign any category that doesn't exist for this month to "other"
   for (let i = 0; i < categories.length; i++) {
     if (!BUILTIN_CATEGORIES_SET.has(categories[i]) && !validCustomCategories.has(categories[i])) {
-      categories[i] = 'other';
+      categories[i] = 'Other';
     }
   }
 

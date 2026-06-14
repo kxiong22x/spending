@@ -1,10 +1,9 @@
-import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatMonth, formatDollar } from '../../utils/format';
 import useMonthData from '../../hooks/useMonthData';
-import useMonths from '../../hooks/useMonths';
 import { useCards } from '../../hooks/useCards';
-import { CARD_PIE_COLORS } from '../../constants/constants';
+import { useCardSpending } from '../../hooks/useCardSpending';
+import { useMonthNavigation } from '../../hooks/useMonthNavigation';
 import PieChart from '../PieChart/PieChart';
 import CategoryColumn from '../CategoryColumn/CategoryColumn';
 import NewCategoryPanel from '../NewCategoryPanel/NewCategoryPanel';
@@ -12,8 +11,6 @@ import NewExpensePanel from '../NewExpensePanel/NewExpensePanel';
 import styles from './MonthDetail.module.css';
 
 export default function MonthDetail({ yearMonth }) {
-  const [dragOverCat, setDragOverCat] = useState(null);
-  const [hoveredCard, setHoveredCard] = useState(null);
   const navigate = useNavigate();
 
   const {
@@ -24,9 +21,13 @@ export default function MonthDetail({ yearMonth }) {
     customCategories,
     colorMap,
     categoriesWithTxs,
+    totalSpending,
+    dragOverCat,
     startDrag,
     cancelDrag,
-    dropOnCategory,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
     addCategory,
     addTransaction,
     deleteCategory,
@@ -34,54 +35,8 @@ export default function MonthDetail({ yearMonth }) {
   } = useMonthData(yearMonth);
 
   const { cards } = useCards();
-
-  const cardColorMap = useMemo(() => Object.fromEntries(
-    cards.map((card, i) => [card.name, CARD_PIE_COLORS[i % CARD_PIE_COLORS.length]])
-  ), [cards]);
-
-  const highlightedTxIds = useMemo(() => {
-    if (!hoveredCard) return new Set();
-    const card = cards.find(c => c.name === hoveredCard);
-    if (!card) return new Set();
-    return new Set(transactions.filter(tx => tx.card_id === card.id).map(tx => tx.id));
-  }, [hoveredCard, cards, transactions]);
-
-  const cardsWithSpending = useMemo(() => {
-    const cardById = Object.fromEntries(cards.map(c => [c.id, c.name]));
-    const totals = {};
-    for (const tx of transactions) {
-      if (tx.card_id == null) continue;
-      const name = cardById[tx.card_id];
-      if (!name) continue;
-      totals[name] = (totals[name] ?? 0) + tx.amount;
-    }
-    return Object.entries(totals).map(([name, total]) => ({ name, total }));
-  }, [cards, transactions]);
-
-  const { months } = useMonths();
-  const sortedMonths = [...months].sort();
-  const currentIndex = sortedMonths.indexOf(yearMonth);
-  const prevMonth = currentIndex > 0 ? sortedMonths[currentIndex - 1] : null;
-  const nextMonth = currentIndex < sortedMonths.length - 1 ? sortedMonths[currentIndex + 1] : null;
-
-  const [year, month] = yearMonth.split('-');
-  const label = formatMonth(yearMonth);
-  const defaultDate = `${year}-${month}-01`;
-
-  function handleDragOver(e, catName) {
-    e.preventDefault();
-    setDragOverCat(catName);
-  }
-
-  function handleDragLeave(e) {
-    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCat(null);
-  }
-
-  function handleDrop(e, toCat) {
-    e.preventDefault();
-    setDragOverCat(null);
-    dropOnCategory(toCat);
-  }
+  const { cardColorMap, cardsWithSpending, highlightedTxIds, onCardHover } = useCardSpending(transactions, cards);
+  const { prevMonth, nextMonth } = useMonthNavigation(yearMonth);
 
   return (
     <div className={styles.detailContainer}>
@@ -89,8 +44,8 @@ export default function MonthDetail({ yearMonth }) {
         {prevMonth ? <button onClick={() => navigate(`/month/${prevMonth}`)} className={styles.navBtn}>← Previous Month</button> : <div />}
         {nextMonth ? <button onClick={() => navigate(`/month/${nextMonth}`)} className={styles.navBtn}>Next Month →</button> : <div />}
       </div>
-      <h1 className={styles.pageTitle}>{label}</h1>
-      {!loading && <p className={styles.totalSpend}>Total Spending: {formatDollar(transactions.reduce((sum, t) => sum + t.amount, 0))}</p>}
+      <h1 className={styles.pageTitle}>{formatMonth(yearMonth)}</h1>
+      {!loading && <p className={styles.totalSpend}>Total Spending: {formatDollar(totalSpending)}</p>}
 
       {loading ? (
         <p className={styles.muted}>Loading…</p>
@@ -100,14 +55,12 @@ export default function MonthDetail({ yearMonth }) {
             <div className={styles.pieRow}>
               {categoriesWithTxs.length > 0 && (
                 <div className={styles.pieCell}>
-                  <h2 className={styles.categoriesHeading}>Spending by Category</h2>
-                  <PieChart categories={categoriesWithTxs} colorMap={colorMap} />
+                  <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} />
                 </div>
               )}
               {cardsWithSpending.length > 0 && (
                 <div className={styles.pieCell}>
-                  <h2 className={styles.categoriesHeading}>Spending by Card</h2>
-                  <PieChart categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={setHoveredCard} />
+                  <PieChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={onCardHover} />
                 </div>
               )}
             </div>
@@ -138,12 +91,12 @@ export default function MonthDetail({ yearMonth }) {
             ))}
 
             <div className={styles.rightCol}>
-              <NewCategoryPanel yearMonth={yearMonth} onAddCategory={addCategory} />
+              <NewCategoryPanel onAddCategory={addCategory} />
               <NewExpensePanel
                 allCategoryNames={allCategoryNames}
                 cards={cards}
                 onAddTransaction={addTransaction}
-                defaultDate={defaultDate}
+                defaultDate={`${yearMonth}-01`}
               />
             </div>
           </div>

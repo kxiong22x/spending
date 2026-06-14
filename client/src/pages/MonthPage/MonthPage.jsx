@@ -1,8 +1,7 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { YEAR_MONTH_REGEX } from '../../constants/constants';
 import MonthDetail from '../../components/MonthDetail/MonthDetail';
 import NewMonthForm from '../../components/NewMonthForm/NewMonthForm';
-
-const YEAR_MONTH_REGEX = /^\d{4}-\d{2}$/;
 
 export default function MonthPage() {
   const { yearMonth } = useParams();

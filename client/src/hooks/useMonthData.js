@@ -6,6 +6,7 @@ export default function useMonthData(yearMonth) {
   const [customCategories, setCustomCategories] = useState([]); // [{ name, is_recurring }]
   const [loading, setLoading] = useState(true);
   const [colorMap, setColorMap] = useState({});
+  const [dragOverCat, setDragOverCat] = useState(null);
   const dragTx = useRef(null); // { id, fromCategory }
 
   useEffect(() => {
@@ -32,9 +33,11 @@ export default function useMonthData(yearMonth) {
     setColorMap(prev => {
       const next = { ...prev };
       let changed = false;
-      allCategoryNames.forEach((name, i) => {
+      let colorCount = Object.keys(next).length;
+      allCategoryNames.forEach((name) => {
         if (!(name in next)) {
-          next[name] = PIE_COLORS[i % PIE_COLORS.length];
+          next[name] = PIE_COLORS[colorCount % PIE_COLORS.length];
+          colorCount++;
           changed = true;
         }
       });
@@ -62,14 +65,20 @@ export default function useMonthData(yearMonth) {
     [categories]
   );
 
+  const totalSpending = useMemo(
+    () => transactions.reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
+
   // Records the dragged transaction so dropOnCategory can identify it.
   function startDrag(tx) {
     dragTx.current = { id: tx.id, fromCategory: tx.category || 'Uncategorized' };
   }
 
-  // Clears the drag ref when a drag is cancelled or ends without a drop.
+  // Clears the drag ref and drop highlight when a drag is cancelled or ends without a drop.
   function cancelDrag() {
     dragTx.current = null;
+    setDragOverCat(null);
   }
 
   // Moves a transaction to toCat optimistically, rolling back on server error.
@@ -94,21 +103,52 @@ export default function useMonthData(yearMonth) {
     }
   }
 
-  // Adds a new custom category to local state after a successful server create.
-  function addCategory(name, isRecurring) {
+  function handleDragOver(e, catName) {
+    e.preventDefault();
+    setDragOverCat(catName);
+  }
+
+  function handleDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCat(null);
+  }
+
+  function handleDrop(e, toCat) {
+    e.preventDefault();
+    setDragOverCat(null);
+    dropOnCategory(toCat);
+  }
+
+  // Creates a category on the server and adds it to local state; throws on failure.
+  async function addCategory(name, isRecurring) {
+    const res = await fetch(`${API}/categories`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, month: yearMonth, is_recurring: isRecurring }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create category');
     setCustomCategories(prev =>
-      prev.some(c => c.name === name) ? prev : [...prev, { name, is_recurring: isRecurring ? 1 : 0 }]
+      prev.some(c => c.name === data.name) ? prev : [...prev, data]
     );
   }
 
-  // Appends a newly created transaction to local state.
-  function addTransaction(tx) {
-    setTransactions(prev => [...prev, tx]);
+  // Creates a transaction on the server and appends it to local state; throws on failure.
+  async function addTransaction(txData) {
+    const res = await fetch(`${API}/transactions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(txData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to add transaction');
+    setTransactions(prev => [...prev, data]);
   }
 
   // Deletes a custom category and moves its transactions to "other" after user confirmation.
   async function deleteCategory(name) {
-    if (!window.confirm(`Delete category "${name}"? All transactions in this category this month will be moved to "other".`)) return;
+    if (!window.confirm(`Delete category "${name}"? All transactions in this category this month will be moved to "Other".`)) return;
 
     try {
       const res = await fetch(`${API}/categories/${encodeURIComponent(name)}?month=${yearMonth}`, {
@@ -117,7 +157,7 @@ export default function useMonthData(yearMonth) {
       });
       if (!res.ok) return;
       setCustomCategories(prev => prev.filter(c => c.name !== name));
-      setTransactions(prev => prev.map(t => t.category === name ? { ...t, category: 'other' } : t));
+      setTransactions(prev => prev.map(t => t.category === name ? { ...t, category: 'Other' } : t));
     } catch {
       // silently ignore network errors
     }
@@ -149,9 +189,13 @@ export default function useMonthData(yearMonth) {
     customCategories,
     colorMap,
     categoriesWithTxs,
+    totalSpending,
+    dragOverCat,
     startDrag,
     cancelDrag,
-    dropOnCategory,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
     addCategory,
     addTransaction,
     deleteCategory,
