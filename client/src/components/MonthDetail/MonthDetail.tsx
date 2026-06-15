@@ -74,11 +74,19 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
 
   return (
     <div className={styles.detailContainer}>
-      <div className={styles.monthNav}>
-        {prevMonth ? <button onClick={() => navigate(`/month/${prevMonth}`)} className={styles.navBtn}>← Previous Month</button> : <div />}
-        {nextMonth ? <button onClick={() => navigate(`/month/${nextMonth}`)} className={styles.navBtn}>Next Month →</button> : <div />}
+      <div className={styles.monthHeader}>
+        <button onClick={() => navigate(`/month/${prevMonth}`)} className={styles.arrowBtn} disabled={!prevMonth}>
+          <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 1 L2 7 L8 13 M2 7 L18 7" />
+          </svg>
+        </button>
+        <h1 className={styles.pageTitle}>{formatMonth(yearMonth)}</h1>
+        <button onClick={() => navigate(`/month/${nextMonth}`)} className={styles.arrowBtn} disabled={!nextMonth}>
+          <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1 L18 7 L12 13 M18 7 L2 7" />
+          </svg>
+        </button>
       </div>
-      <h1 className={styles.pageTitle}>{formatMonth(yearMonth)}</h1>
       {!loading && <p className={styles.totalSpend}>Total Spending: {formatDollar(totalSpending)}</p>}
 
       {loading ? (
@@ -92,6 +100,9 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
                   <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} onSliceHover={handleCategoryHover} onSliceClick={handleCategoryClick} lockedSlice={lockedCategory} />
                 </div>
               )}
+              {categoriesWithTxs.length > 0 && cardsWithSpending.length > 0 && (
+                <div className={styles.verticalDivider} />
+              )}
               {cardsWithSpending.length > 0 && (
                 <div className={styles.pieCell}>
                   <HorizontalBarChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={handleCardHover} onSliceClick={handleCardClick} lockedSlice={lockedCard} />
@@ -102,7 +113,12 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
 
           <div className={styles.centeredText}>
             <h2 className={styles.categoriesHeading}>Categories</h2>
-            <p className={styles.muted}>You can drag and drop transactions between categories.</p>
+            <p className={styles.muted}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.3em', marginBottom: '0.1em' }}>
+                <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/>
+              </svg>
+              Drag transactions between groups to recategorize
+            </p>
           </div>
 
           <div className={styles.categoryRow}>

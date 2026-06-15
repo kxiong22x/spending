@@ -38,12 +38,16 @@ export default function HorizontalBarChart({ title, categories, colorMap, onSlic
               onMouseLeave={handleMouseLeave}
               onClick={() => handleClick(cat.name)}
             >
-              <span className={styles.name}>{cat.name}</span>
+              <div className={styles.rowTop}>
+                <span className={styles.name}>{cat.name}</span>
+                <span className={styles.meta}>
+                  <span className={styles.amt}>{formatDollar(cat.total)}</span>
+                  <span className={styles.pct}>{formatPercent(fraction)}</span>
+                </span>
+              </div>
               <div className={styles.track}>
                 <div className={styles.fill} style={{ width: `${fraction * 100}%`, background: colorMap[cat.name] }} />
               </div>
-              <span className={styles.amt}>{formatDollar(cat.total)}</span>
-              <span className={styles.pct}>{formatPercent(fraction)}</span>
             </div>
           );
         })}
