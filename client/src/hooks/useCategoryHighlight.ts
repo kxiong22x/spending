@@ -1,25 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Transaction } from '@shared/types';
+import { useHoverLock } from './useHoverLock';
 
 // Derives highlighted transaction IDs based on which category pie slice is hovered or locked.
 export function useCategoryHighlight(transactions: Transaction[]) {
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
-  const [lockedCategory, setLockedCategory] = useState<string | null>(null);
-
-  const effectiveCategory = hoveredCategory ?? lockedCategory;
-
-  function onCategoryHover(name: string | null): void {
-    setHoveredCategory(name);
-    if (name !== null && name !== lockedCategory) setLockedCategory(null);
-  }
-
-  function onCategoryClick(name: string): void {
-    setLockedCategory(prev => prev === name ? null : name);
-  }
-
-  function clearCategoryLock(): void {
-    setLockedCategory(null);
-  }
+  const { effective: effectiveCategory, locked: lockedCategory, onHover: onCategoryHover, onClick: onCategoryClick, clearLock: clearCategoryLock } = useHoverLock();
 
   const categoryHighlightedTxIds = useMemo(() => {
     if (!effectiveCategory) return new Set<number>();

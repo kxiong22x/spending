@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { API, PIE_COLORS, CATEGORY_ORDER } from '../constants/constants';
+import { useState, useEffect, useMemo } from 'react';
+import { PIE_COLORS, CATEGORY_ORDER } from '../constants/constants';
 import { Transaction, CustomCategory, CategoryWithTransactions } from '@shared/types';
+import { apiFetch } from '../utils/api';
+import { useDragDrop } from './useDragDrop';
 
 interface NewTransactionData {
   date: string;
@@ -15,15 +17,13 @@ export default function useMonthData(yearMonth: string) {
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [colorMap, setColorMap] = useState<Record<string, string>>({});
-  const [dragOverCat, setDragOverCat] = useState<string | null>(null);
-  const dragTx = useRef<{ id: number; fromCategory: string } | null>(null);
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/transactions?month=${yearMonth}`, { credentials: 'include' }).then(r => r.json()),
-      fetch(`${API}/categories?month=${yearMonth}`, { credentials: 'include' }).then(r => r.json()),
+      apiFetch<Transaction[]>(`/transactions?month=${yearMonth}`),
+      apiFetch<CustomCategory[]>(`/categories?month=${yearMonth}`),
     ])
-      .then(([txs, cats]: [Transaction[], CustomCategory[]]) => {
+      .then(([txs, cats]) => {
         setTransactions(txs);
         setCustomCategories(cats);
         setLoading(false);
@@ -79,80 +79,26 @@ export default function useMonthData(yearMonth: string) {
     [transactions]
   );
 
-  // Records the dragged transaction so dropOnCategory can identify it.
-  function startDrag(tx: Transaction): void {
-    dragTx.current = { id: tx.id, fromCategory: tx.category || 'Uncategorized' };
-  }
-
-  // Clears the drag ref and drop highlight when a drag is cancelled or ends without a drop.
-  function cancelDrag(): void {
-    dragTx.current = null;
-    setDragOverCat(null);
-  }
-
-  // Moves a transaction to toCat optimistically, rolling back on server error.
-  async function dropOnCategory(toCat: string): Promise<void> {
-    const { id, fromCategory } = dragTx.current ?? {};
-    dragTx.current = null;
-    if (!id || fromCategory === toCat) return;
-
-    const prev = transactions;
-    setTransactions(txs => txs.map(t => t.id === id ? { ...t, category: toCat } : t));
-
-    try {
-      const res = await fetch(`${API}/transactions/${id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: toCat }),
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      setTransactions(prev);
-    }
-  }
-
-  function handleDragOver(e: React.DragEvent, catName: string): void {
-    e.preventDefault();
-    setDragOverCat(catName);
-  }
-
-  function handleDragLeave(e: React.DragEvent): void {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCat(null);
-  }
-
-  function handleDrop(e: React.DragEvent, toCat: string): void {
-    e.preventDefault();
-    setDragOverCat(null);
-    dropOnCategory(toCat);
-  }
+  const dragDrop = useDragDrop(transactions, setTransactions);
 
   // Creates a category on the server and adds it to local state; throws on failure.
   async function addCategory(name: string, isRecurring: boolean): Promise<void> {
-    const res = await fetch(`${API}/categories`, {
+    const data = await apiFetch<CustomCategory>('/categories', {
       method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, month: yearMonth, is_recurring: isRecurring }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create category');
     setCustomCategories(prev =>
-      prev.some(c => c.name === data.name) ? prev : [...prev, data as CustomCategory]
+      prev.some(c => c.name === data.name) ? prev : [...prev, data]
     );
   }
 
   // Creates a transaction on the server and appends it to local state; throws on failure.
   async function addTransaction(txData: NewTransactionData): Promise<void> {
-    const res = await fetch(`${API}/transactions`, {
+    const data = await apiFetch<Transaction>('/transactions', {
       method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(txData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to add transaction');
-    setTransactions(prev => [...prev, data as Transaction]);
+    setTransactions(prev => [...prev, data]);
   }
 
   // Deletes a custom category and moves its transactions to "Other" after user confirmation.
@@ -160,11 +106,7 @@ export default function useMonthData(yearMonth: string) {
     if (!window.confirm(`Delete category "${name}"? All transactions in this category this month will be moved to "Other".`)) return;
 
     try {
-      const res = await fetch(`${API}/categories/${encodeURIComponent(name)}?month=${yearMonth}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) return;
+      await apiFetch(`/categories/${encodeURIComponent(name)}?month=${yearMonth}`, { method: 'DELETE' });
       setCustomCategories(prev => prev.filter(c => c.name !== name));
       setTransactions(prev => prev.map(t => t.category === name ? { ...t, category: 'Other' } : t));
     } catch {
@@ -180,11 +122,7 @@ export default function useMonthData(yearMonth: string) {
     setTransactions(txs => txs.filter(t => t.id !== id));
 
     try {
-      const res = await fetch(`${API}/transactions/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error();
+      await apiFetch(`/transactions/${id}`, { method: 'DELETE' });
     } catch {
       setTransactions(prev);
     }
@@ -199,12 +137,7 @@ export default function useMonthData(yearMonth: string) {
     colorMap,
     categoriesWithTxs,
     totalSpending,
-    dragOverCat,
-    startDrag,
-    cancelDrag,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
+    ...dragDrop,
     addCategory,
     addTransaction,
     deleteCategory,

@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
-import { API } from '../constants/constants';
+import { apiFetch } from '../utils/api';
 import { formatMonth } from '../utils/format';
 import { CardRows } from '@shared/types';
 
 // Uploads parsed card rows for a month to the server; throws on failure.
 export async function uploadMonth(yearMonth: string, cardRows: CardRows[]): Promise<{ inserted: number; skipped: number }> {
-  const res = await fetch(`${API}/transactions/upload`, {
+  return apiFetch('/transactions/upload', {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ month: yearMonth, cardRows }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Upload failed.');
-  return data as { inserted: number; skipped: number };
 }
 
 export interface MonthSummary {
@@ -23,26 +18,24 @@ export interface MonthSummary {
 
 export default function useMonths(): {
   months: MonthSummary[];
-  deleteMonth: (m: string) => Promise<void>;
+  deleteMonth: (yearMonth: string) => Promise<void>;
 } {
   const [months, setMonths] = useState<MonthSummary[]>([]);
 
   useEffect(() => {
-    fetch(`${API}/months`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((data: MonthSummary[]) => setMonths(data))
+    apiFetch<MonthSummary[]>('/months')
+      .then(setMonths)
       .catch(() => setMonths([]));
   }, []);
 
-  async function deleteMonth(m: string): Promise<void> {
-    if (!window.confirm(`Delete ${formatMonth(m)}? All transactions for this month will be permanently deleted.`)) return;
+  async function deleteMonth(yearMonth: string): Promise<void> {
+    if (!window.confirm(`Delete ${formatMonth(yearMonth)}? All transactions for this month will be permanently deleted.`)) return;
 
     const prev = months;
-    setMonths(months.filter(x => x.month !== m));
+    setMonths(months.filter(x => x.month !== yearMonth));
 
     try {
-      const res = await fetch(`${API}/months/${m}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error();
+      await apiFetch(`/months/${yearMonth}`, { method: 'DELETE' });
     } catch {
       setMonths(prev);
     }

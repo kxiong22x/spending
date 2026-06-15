@@ -1,6 +1,23 @@
 {
   "BUILTIN_CATEGORIES": ["Dining", "Groceries", "Shopping", "Entertainment", "Transportation", "Other"],
   "MAX_NAME_LENGTH": 50,
+  "MAX_DESCRIPTION_LENGTH": 500,
+  "MAX_RULES_PER_USER": 1000,
   "YEAR_MONTH_PATTERN": "^\\d{4}-\\d{2}$",
-  "DATE_PATTERN": "^\\d{4}-\\d{2}-\\d{2}$"
+  "DATE_PATTERN": "^\\d{4}-\\d{2}-\\d{2}$",
+  "AUTOPAY_PATTERNS": [
+    "autopay",
+    "automatic payment",
+    "online payment",
+    "payment thank you",
+    "payment received",
+    "payment - thank you",
+    "mobile payment",
+    "e-payment",
+    "web payment",
+    "bill payment",
+    "directpay",
+    "credit card payment",
+    "balance transfer"
+  ]
 }

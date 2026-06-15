@@ -1,8 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { BUILTIN_CATEGORIES } from './constants';
-import { db } from './db';
-
-const DEFAULT_DAILY_TOKEN_LIMIT = 1_000_000;
+import { getTodayUsage, recordUsage, getDailyTokenLimit } from './geminiTokenUsage';
 
 // Keyword fallback used when the Gemini API is unavailable
 import KEYWORDS from './keywords.json';
@@ -19,29 +17,6 @@ function keywordFallback(description: string): string {
     if (keywords.some(kw => desc.includes(kw))) return category;
   }
   return 'Other';
-}
-
-// Returns today's date as a YYYY-MM-DD string.
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-// Returns the number of Gemini tokens used today.
-async function getTodayUsage(): Promise<number> {
-  const result = await db.execute({
-    sql: 'SELECT tokens_used FROM gemini_usage WHERE date = ?',
-    args: [today()],
-  });
-  return result.rows.length > 0 ? Number(result.rows[0].tokens_used) : 0;
-}
-
-// Adds tokensUsed to today's running Gemini token total.
-async function recordUsage(tokensUsed: number): Promise<void> {
-  await db.execute({
-    sql: `INSERT INTO gemini_usage (date, tokens_used) VALUES (?, ?)
-          ON CONFLICT(date) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used`,
-    args: [today(), tokensUsed],
-  });
 }
 
 // Normalizes a transaction description into a stable lookup pattern.
@@ -87,7 +62,7 @@ async function classifyTransactions(
     console.warn('GOOGLE_AI_API_KEY not set — falling back to keyword classification');
     unknownCategories = unknownTransactions.map(t => keywordFallback(t.description));
   } else {
-    const limit = parseInt(process.env.GEMINI_DAILY_TOKEN_LIMIT ?? String(DEFAULT_DAILY_TOKEN_LIMIT), 10);
+    const limit = getDailyTokenLimit();
     const used = await getTodayUsage();
     if (used >= limit) {
       throw new Error(`Gemini daily token limit of ${limit.toLocaleString()} reached (used: ${used.toLocaleString()}). Uploads are disabled until tomorrow.`);

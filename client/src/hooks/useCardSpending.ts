@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { CARD_PIE_COLORS } from '../constants/constants';
 import { Transaction, Card } from '@shared/types';
+import { useHoverLock } from './useHoverLock';
 
 // Derives per-card spending totals, color assignments, and highlight state from transactions and cards.
 export function useCardSpending(transactions: Transaction[], cards: Card[]) {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [lockedCard, setLockedCard] = useState<string | null>(null);
-
-  const effectiveCard = hoveredCard ?? lockedCard;
+  const { effective: effectiveCard, locked: lockedCard, onHover: onCardHover, onClick: onCardClick, clearLock: clearCardLock } = useHoverLock();
 
   const cardColorMap = useMemo(() => Object.fromEntries(
     cards.map((card, i) => [card.name, CARD_PIE_COLORS[i % CARD_PIE_COLORS.length]])
@@ -31,19 +29,6 @@ export function useCardSpending(transactions: Transaction[], cards: Card[]) {
     if (!card) return new Set<number>();
     return new Set(transactions.filter(tx => tx.card_id === card.id).map(tx => tx.id));
   }, [effectiveCard, cards, transactions]);
-
-  function onCardHover(name: string | null): void {
-    setHoveredCard(name);
-    if (name !== null && name !== lockedCard) setLockedCard(null);
-  }
-
-  function onCardClick(name: string): void {
-    setLockedCard(prev => prev === name ? null : name);
-  }
-
-  function clearCardLock(): void {
-    setLockedCard(null);
-  }
 
   return { cardColorMap, cardsWithSpending, highlightedTxIds, onCardHover, onCardClick, lockedCard, clearCardLock };
 }

@@ -1,6 +1,6 @@
 import shared from '@shared/constants.json';
 
-export const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export { API } from '../utils/api';
 
 export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',

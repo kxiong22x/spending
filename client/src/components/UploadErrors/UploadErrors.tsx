@@ -1,9 +1,5 @@
+import { FileResult } from '../../utils/csv';
 import styles from './UploadErrors.module.css';
-
-interface FileResult {
-  file: string;
-  error?: string;
-}
 
 interface UploadErrorsProps {
   results: FileResult[];

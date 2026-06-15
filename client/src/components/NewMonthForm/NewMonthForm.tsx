@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { parseFilesForCards } from '../../utils/csv';
+import { parseFilesForCards, FileResult } from '../../utils/csv';
 import { uploadMonth } from '../../hooks/useMonths';
 import { CURRENT_YEAR, CURRENT_MONTH } from '../../constants/constants';
 import { useCards } from '../../hooks/useCards';
+import { useCardFiles } from '../../hooks/useCardFiles';
 import MonthPicker from '../MonthPicker/MonthPicker';
-import CsvDropzone from '../CsvDropzone/CsvDropzone';
+import CardFileDropzones from '../CardFileDropzones/CardFileDropzones';
 import UploadErrors from '../UploadErrors/UploadErrors';
 import styles from './NewMonthForm.module.css';
 import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 
-interface FileResult {
-  file: string;
-  error?: string;
+interface UploadFileResult extends FileResult {
   inserted?: number;
   skipped?: number;
   parseErrors?: number;
 }
 
 interface UploadStatusResult {
-  results: FileResult[];
+  results: UploadFileResult[];
   yearMonth: string;
 }
 
@@ -32,25 +31,10 @@ interface NewMonthFormProps {
 export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
   const [month, setMonth] = useState(CURRENT_MONTH);
   const [year, setYear]   = useState(String(CURRENT_YEAR));
-  // cardFiles maps cardId (number) -> File[]
-  const [cardFiles, setCardFiles] = useState<Record<number, File[]>>({});
   const [status, setStatus] = useState<UploadStatus>(null);
   const [missingCards, setMissingCards] = useState<string[]>([]);
   const { cards, loading: cardsLoading } = useCards();
-
-  function handleFilesAdded(cardId: number, incoming: FileList): void {
-    const csvs = Array.from(incoming).filter(
-      f => f.name.toLowerCase().endsWith('.csv') || f.type === 'text/csv'
-    );
-    setCardFiles(prev => {
-      const existing = new Set((prev[cardId] ?? []).map(f => f.name));
-      return { ...prev, [cardId]: [...(prev[cardId] ?? []), ...csvs.filter(f => !existing.has(f.name))] };
-    });
-  }
-
-  function handleFileRemoved(cardId: number, name: string): void {
-    setCardFiles(prev => ({ ...prev, [cardId]: (prev[cardId] ?? []).filter(f => f.name !== name) }));
-  }
+  const { cardFiles, handleFilesAdded, handleFileRemoved } = useCardFiles();
 
   async function handleCreate(force = false): Promise<void> {
     setStatus('loading');
@@ -82,7 +66,7 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
     try {
       const data = await uploadMonth(yearMonth, cardRows);
       const allFileNames = cards.flatMap(c => (cardFiles[c.id] ?? []).map(f => f.name)).join(', ');
-      setStatus({ results: [{ file: allFileNames, ...data, parseErrors: totalParseErrors }], yearMonth });
+      setStatus({ results: [{ file: allFileNames, ...data, parseErrors: totalParseErrors } as UploadFileResult], yearMonth });
       onSuccess(yearMonth);
     } catch (err) {
       setStatus({ results: [{ file: '—', error: (err as Error).message || 'Upload failed. Is the server running?' }], yearMonth });
@@ -103,26 +87,14 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
 
       <p className={styles.hint}>Only transactions within the selected month will be imported. Transactions from other months will be ignored.</p>
 
-      {cardsLoading ? (
-        <p>Loading cards<AnimatedEllipsis /></p>
-      ) : cards.length === 0 ? (
-        <p className={styles.noCards}>No cards registered. <Link to="/cards">Add a card</Link> before creating a month.</p>
-      ) : (
-        <div className={styles.cardRows}>
-          {cards.map(card => (
-            <div key={card.id} className={styles.cardRow}>
-              <span className={styles.cardName}>{card.name}</span>
-              <div className={styles.dropzoneWrapper}>
-                <CsvDropzone
-                  files={cardFiles[card.id] ?? []}
-                  onFilesAdded={files => handleFilesAdded(card.id, files)}
-                  onFileRemoved={name => handleFileRemoved(card.id, name)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <CardFileDropzones
+        cards={cards}
+        loading={cardsLoading}
+        cardFiles={cardFiles}
+        onFilesAdded={handleFilesAdded}
+        onFileRemoved={handleFileRemoved}
+        noCardsMessage={<><Link to="/cards">Add a card</Link> before creating a month.</>}
+      />
 
       {missingCards.length > 0 && (
         <div className={styles.warning}>

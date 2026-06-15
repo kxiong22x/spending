@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MAX_NAME_LENGTH } from '../../constants/constants';
+import { useFormState } from '../../hooks/useFormState';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewCategoryPanel.module.css';
 import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
@@ -11,23 +12,16 @@ interface NewCategoryPanelProps {
 export default function NewCategoryPanel({ onAddCategory }: NewCategoryPanelProps) {
   const [catName, setCatName] = useState('');
   const [isRecurring, setIsRecurring] = useState(true);
-  const [catError, setCatError] = useState<string | null>(null);
-  const [catSaving, setCatSaving] = useState(false);
+  const { error, saving, run, clearError } = useFormState();
 
   async function handleAddCategory(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     const name = catName.trim();
     if (!name) return;
-    setCatSaving(true);
-    setCatError(null);
-    try {
+    await run(async () => {
       await onAddCategory(name, isRecurring);
       setCatName('');
-    } catch (err) {
-      setCatError((err as Error).message || 'Failed to create category');
-    } finally {
-      setCatSaving(false);
-    }
+    });
   }
 
   return (
@@ -37,14 +31,14 @@ export default function NewCategoryPanel({ onAddCategory }: NewCategoryPanelProp
         <div className={styles.inputRow}>
           <input
             value={catName}
-            onChange={e => { setCatName(e.target.value); setCatError(null); }}
+            onChange={e => { setCatName(e.target.value); clearError(); }}
             placeholder="Category name"
             maxLength={MAX_NAME_LENGTH}
-            disabled={catSaving}
+            disabled={saving}
             className={panelStyles.panelInput}
           />
-          <button type="submit" disabled={!catName.trim() || catSaving} className={panelStyles.panelBtn}>
-            {catSaving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
+          <button type="submit" disabled={!catName.trim() || saving} className={panelStyles.panelBtn}>
+            {saving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
           </button>
         </div>
         <label className={styles.checkboxLabel}>
@@ -52,12 +46,12 @@ export default function NewCategoryPanel({ onAddCategory }: NewCategoryPanelProp
             type="checkbox"
             checked={isRecurring}
             onChange={e => setIsRecurring(e.target.checked)}
-            disabled={catSaving}
+            disabled={saving}
           />
           Recurring
         </label>
       </form>
-      {catError && <p className={panelStyles.panelError}>{catError}</p>}
+      {error && <p className={panelStyles.panelError}>{error}</p>}
     </div>
   );
 }

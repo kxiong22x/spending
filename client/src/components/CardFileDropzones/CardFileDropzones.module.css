@@ -1,0 +1,29 @@
+.cardRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cardName {
+  width: 10rem;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.dropzoneWrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.noCards {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}

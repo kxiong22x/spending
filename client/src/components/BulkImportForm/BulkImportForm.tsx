@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import useMonths, { uploadMonth } from '../../hooks/useMonths';
 import { useCards } from '../../hooks/useCards';
+import { useCardFiles } from '../../hooks/useCardFiles';
 import useParsedMonths from '../../hooks/useParsedMonths';
 import { formatMonth } from '../../utils/format';
-import CsvDropzone from '../CsvDropzone/CsvDropzone';
+import CardFileDropzones from '../CardFileDropzones/CardFileDropzones';
 import UploadErrors from '../UploadErrors/UploadErrors';
 import styles from './BulkImportForm.module.css';
 import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
@@ -16,30 +17,14 @@ interface BulkImportFormProps {
 }
 
 export default function BulkImportForm({ onSuccess }: BulkImportFormProps) {
-  const [cardFiles, setCardFiles] = useState<Record<number, File[]>>({});
   const [importStatus, setImportStatus] = useState<Map<string, MonthStatus>>(new Map());
   const [importing, setImporting] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const { cards, loading: cardsLoading } = useCards();
   const { months } = useMonths();
+  const { cardFiles, handleFilesAdded, handleFileRemoved } = useCardFiles();
   const parsed = useParsedMonths(cards, cardFiles);
   const existingMonths = useMemo(() => new Set(months.map(m => m.month)), [months]);
-
-  function handleFilesAdded(cardId: number, incoming: FileList): void {
-    if (importing) return;
-    const csvs = Array.from(incoming).filter(
-      f => f.name.toLowerCase().endsWith('.csv') || f.type === 'text/csv'
-    );
-    setCardFiles(prev => {
-      const existing = new Set((prev[cardId] ?? []).map(f => f.name));
-      return { ...prev, [cardId]: [...(prev[cardId] ?? []), ...csvs.filter(f => !existing.has(f.name))] };
-    });
-  }
-
-  function handleFileRemoved(cardId: number, name: string): void {
-    if (importing) return;
-    setCardFiles(prev => ({ ...prev, [cardId]: (prev[cardId] ?? []).filter(f => f.name !== name) }));
-  }
 
   async function handleImport(): Promise<void> {
     if (!parsed || importing) return;
@@ -85,26 +70,15 @@ export default function BulkImportForm({ onSuccess }: BulkImportFormProps) {
         All months found will be imported automatically - months that already exist will be skipped.
       </p>
 
-      {cardsLoading ? (
-        <p>Loading cards<AnimatedEllipsis /></p>
-      ) : cards.length === 0 ? (
-        <p className={styles.noCards}>No cards registered. <Link to="/cards">Add a card</Link> before importing.</p>
-      ) : (
-        <div className={styles.cardRows}>
-          {cards.map(card => (
-            <div key={card.id} className={styles.cardRow}>
-              <span className={styles.cardName}>{card.name}</span>
-              <div className={styles.dropzoneWrapper}>
-                <CsvDropzone
-                  files={cardFiles[card.id] ?? []}
-                  onFilesAdded={files => handleFilesAdded(card.id, files)}
-                  onFileRemoved={name => handleFileRemoved(card.id, name)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <CardFileDropzones
+        cards={cards}
+        loading={cardsLoading}
+        cardFiles={cardFiles}
+        onFilesAdded={handleFilesAdded}
+        onFileRemoved={handleFileRemoved}
+        disabled={importing}
+        noCardsMessage={<><Link to="/cards">Add a card</Link> before importing.</>}
+      />
 
       {parsed?.fileResults && <UploadErrors results={parsed.fileResults} />}
 
@@ -123,10 +97,10 @@ export default function BulkImportForm({ onSuccess }: BulkImportFormProps) {
                 {!importStarted && willSkip && (
                   <span className={`${styles.badge} ${styles.badgeSkipped}`}>already exists</span>
                 )}
-                {status === 'pending' && <span className={styles.badge}>pending</span>}
-                {status === 'importing' && <span className={`${styles.badge} ${styles.badgeImporting}`}>importing<AnimatedEllipsis /></span>}
-                {status === 'done' && <span className={`${styles.badge} ${styles.badgeDone}`}>✓ imported</span>}
-                {status === 'skipped' && <span className={`${styles.badge} ${styles.badgeSkipped}`}>skipped</span>}
+                {status === 'pending' && <span className={styles.badge}>Pending</span>}
+                {status === 'importing' && <span className={`${styles.badge} ${styles.badgeImporting}`}>Importing<AnimatedEllipsis /></span>}
+                {status === 'done' && <span className={`${styles.badge} ${styles.badgeDone}`}>✓ Imported</span>}
+                {status === 'skipped' && <span className={`${styles.badge} ${styles.badgeSkipped}`}>Skipped</span>}
                 {status && typeof status === 'object' && (
                   <span className={`${styles.badge} ${styles.badgeError}`}>✗ {status.error}</span>
                 )}

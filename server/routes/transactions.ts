@@ -2,27 +2,8 @@ import express from 'express';
 import { db } from '../db';
 import requireAuth from '../middleware/requireAuth';
 import { classifyTransactions, extractPattern } from '../classify';
-import { BUILTIN_CATEGORIES_SET, MONTH_REGEX, DATE_REGEX } from '../constants';
+import { BUILTIN_CATEGORIES_SET, MONTH_REGEX, DATE_REGEX, AUTOPAY_PATTERNS, MAX_DESCRIPTION_LENGTH, MAX_RULES_PER_USER } from '../constants';
 
-// Mirrors the client-side AUTOPAY_PATTERNS in csv.ts — keep these in sync.
-const AUTOPAY_PATTERNS = [
-  'autopay',
-  'automatic payment',
-  'online payment',
-  'payment thank you',
-  'payment received',
-  'payment - thank you',
-  'mobile payment',
-  'e-payment',
-  'web payment',
-  'bill payment',
-  'directpay',
-  'credit card payment',
-  'balance transfer',
-];
-
-const MAX_RULES_PER_USER = 1000;
-const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_CATEGORY_LENGTH = 100;
 
 const router = express.Router();
@@ -53,6 +34,48 @@ async function copyRecurringCategories(userId: number, targetMonth: string): Pro
 // Returns true if str is a valid YYYY-MM-DD date string.
 function isValidDate(str: unknown): str is string {
   return typeof str === 'string' && DATE_REGEX.test(str);
+}
+
+// Upserts a learned classification rule, evicting the least-frequently-used rule if the user is at capacity.
+async function learnFromRecategorization(userId: number, description: string, category: string): Promise<void> {
+  const pattern = extractPattern(description);
+  if (!pattern) return;
+
+  const ruleCountResult = await db.execute({
+    sql: 'SELECT COUNT(*) AS cnt FROM classification_rules WHERE user_id = ?',
+    args: [userId],
+  });
+  const ruleCount = Number(ruleCountResult.rows[0].cnt);
+
+  const existsResult = await db.execute({
+    sql: 'SELECT 1 FROM classification_rules WHERE user_id = ? AND pattern = ?',
+    args: [userId, pattern],
+  });
+  const alreadyExists = existsResult.rows.length > 0;
+
+  const stmts = [];
+  if (!alreadyExists && ruleCount >= MAX_RULES_PER_USER) {
+    stmts.push({
+      sql: `DELETE FROM classification_rules
+            WHERE user_id = ? AND id = (
+              SELECT id FROM classification_rules
+              WHERE user_id = ?
+              ORDER BY hit_count ASC, updated_at ASC
+              LIMIT 1
+            )`,
+      args: [userId, userId],
+    });
+  }
+  stmts.push({
+    sql: `INSERT INTO classification_rules (user_id, pattern, category, hit_count, updated_at)
+          VALUES (?, ?, ?, 0, datetime('now'))
+          ON CONFLICT(user_id, pattern) DO UPDATE SET
+            category = excluded.category,
+            hit_count = 0,
+            updated_at = datetime('now')`,
+    args: [userId, pattern, category],
+  });
+  await db.batch(stmts, 'write');
 }
 
 interface CsvRow {
@@ -262,46 +285,7 @@ router.patch('/:id', async (req, res) => {
 
   if (updateResult.rowsAffected === 0) return res.status(404).json({ error: 'Transaction not found' });
 
-  // Learn from this recategorization — evict LFU rule if at cap
-  const pattern = extractPattern(tx.description as string);
-  if (pattern) {
-    const ruleCountResult = await db.execute({
-      sql: 'SELECT COUNT(*) AS cnt FROM classification_rules WHERE user_id = ?',
-      args: [req.user!.id],
-    });
-    const ruleCount = Number(ruleCountResult.rows[0].cnt);
-
-    const existsResult = await db.execute({
-      sql: 'SELECT 1 FROM classification_rules WHERE user_id = ? AND pattern = ?',
-      args: [req.user!.id, pattern],
-    });
-    const alreadyExists = existsResult.rows.length > 0;
-
-    const upsertStmts = [];
-    if (!alreadyExists && ruleCount >= MAX_RULES_PER_USER) {
-      // Evict the least-frequently-used rule (oldest among ties)
-      upsertStmts.push({
-        sql: `DELETE FROM classification_rules
-              WHERE user_id = ? AND id = (
-                SELECT id FROM classification_rules
-                WHERE user_id = ?
-                ORDER BY hit_count ASC, updated_at ASC
-                LIMIT 1
-              )`,
-        args: [req.user!.id, req.user!.id],
-      });
-    }
-    upsertStmts.push({
-      sql: `INSERT INTO classification_rules (user_id, pattern, category, hit_count, updated_at)
-            VALUES (?, ?, ?, 0, datetime('now'))
-            ON CONFLICT(user_id, pattern) DO UPDATE SET
-              category = excluded.category,
-              hit_count = 0,
-              updated_at = datetime('now')`,
-      args: [req.user!.id, pattern, category.trim()],
-    });
-    await db.batch(upsertStmts, 'write');
-  }
+  await learnFromRecategorization(req.user!.id, tx.description as string, category.trim());
 
   res.json({ ok: true });
 });
@@ -323,7 +307,7 @@ router.delete('/:id', async (req, res) => {
 // GET /transactions?month=YYYY-MM
 router.get('/', async (req, res) => {
   const { month } = req.query as { month?: string };
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+  if (!month || !MONTH_REGEX.test(month)) {
     return res.status(400).json({ error: 'month query parameter required (YYYY-MM)' });
   }
 

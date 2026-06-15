@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useFormState } from '../../hooks/useFormState';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewExpensePanel.module.css';
 import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
@@ -25,8 +26,7 @@ export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTra
   const [category, setCategory] = useState(allCategoryNames[0] ?? '');
   const [cardId, setCardId] = useState<number | null>(cards[0]?.id ?? null);
   const [amount, setAmount] = useState('');
-  const [txError, setTxError] = useState<string | null>(null);
-  const [txSaving, setTxSaving] = useState(false);
+  const { error, saving, run } = useFormState();
 
   // If the selected category was removed (shouldn't normally happen), fall back to first
   useEffect(() => {
@@ -39,17 +39,11 @@ export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTra
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
     if (!date || !desc.trim() || !category || isNaN(parsedAmount)) return;
-    setTxSaving(true);
-    setTxError(null);
-    try {
+    await run(async () => {
       await onAddTransaction({ date, description: desc.trim(), category, amount: parsedAmount, card_id: cardId });
       setDesc('');
       setAmount('');
-    } catch (err) {
-      setTxError((err as Error).message || 'Failed to add transaction');
-    } finally {
-      setTxSaving(false);
-    }
+    });
   }
 
   return (
@@ -102,13 +96,13 @@ export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTra
         />
         <button
           type="submit"
-          disabled={!date || !desc.trim() || !category || !amount || txSaving}
+          disabled={!date || !desc.trim() || !category || !amount || saving}
           className={panelStyles.panelBtn}
         >
-          {txSaving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
+          {saving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
         </button>
       </form>
-      {txError && <p className={panelStyles.panelError}>{txError}</p>}
+      {error && <p className={panelStyles.panelError}>{error}</p>}
     </div>
   );
 }

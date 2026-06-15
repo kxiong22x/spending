@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useFormState } from '../../hooks/useFormState';
 import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 import styles from './CardList.module.css';
 
@@ -14,15 +14,10 @@ interface Props {
 }
 
 export default function CardList({ cards, loading, deleteCard }: Props) {
-  const [error, setError] = useState('');
+  const { error, run } = useFormState();
 
   async function handleDelete(id: number): Promise<void> {
-    setError('');
-    try {
-      await deleteCard(id);
-    } catch (err) {
-      setError((err as Error).message);
-    }
+    await run(() => deleteCard(id));
   }
 
   if (loading) return <p>Loading<AnimatedEllipsis /></p>;

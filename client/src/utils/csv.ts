@@ -1,27 +1,13 @@
 import { CsvRow, CardRows } from '@shared/types';
 import { Card } from '@shared/types';
+import shared from '@shared/constants.json';
 
 const DATE_ALIASES        = ['date', 'transaction date', 'trans. date', 'posted date', 'post date'];
 const AMOUNT_ALIASES      = ['amount', 'debit', 'transaction amount', 'charge amount'];
 const DESCRIPTION_ALIASES = ['description', 'original description', 'memo', 'payee', 'merchant', 'name'];
 const CATEGORY_ALIASES    = ['category'];
 
-// Substrings that identify credit card payment rows, which should be excluded from spending data.
-const AUTOPAY_PATTERNS = [
-  'autopay',
-  'automatic payment',
-  'online payment',
-  'payment thank you',
-  'payment received',
-  'payment - thank you',
-  'mobile payment',
-  'e-payment',
-  'web payment',
-  'bill payment',
-  'directpay',
-  'credit card payment',
-  'balance transfer',
-];
+const AUTOPAY_PATTERNS: string[] = shared.AUTOPAY_PATTERNS;
 
 interface ParseCsvResult {
   rows: CsvRow[];

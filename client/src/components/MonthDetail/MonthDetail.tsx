@@ -1,12 +1,7 @@
-import { useMemo } from 'react';
-import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 import { useNavigate } from 'react-router-dom';
+import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 import { formatMonth, formatDollar } from '../../utils/format';
-import useMonthData from '../../hooks/useMonthData';
-import { useCards } from '../../hooks/useCards';
-import { useCardSpending } from '../../hooks/useCardSpending';
-import { useCategoryHighlight } from '../../hooks/useCategoryHighlight';
-import { useMonthNavigation } from '../../hooks/useMonthNavigation';
+import { useMonthDetailState } from '../../hooks/useMonthDetailState';
 import PieChart from '../PieChart/PieChart';
 import HorizontalBarChart from '../HorizontalBarChart/HorizontalBarChart';
 import CategoryColumn from '../CategoryColumn/CategoryColumn';
@@ -20,7 +15,6 @@ interface MonthDetailProps {
 
 export default function MonthDetail({ yearMonth }: MonthDetailProps) {
   const navigate = useNavigate();
-
   const {
     loading,
     transactions,
@@ -40,48 +34,29 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
     addTransaction,
     deleteCategory,
     deleteTransaction,
-  } = useMonthData(yearMonth);
-
-  const { cards } = useCards();
-  const { cardColorMap, cardsWithSpending, highlightedTxIds: cardHighlightedTxIds, onCardHover, onCardClick, lockedCard, clearCardLock } = useCardSpending(transactions, cards);
-  const { categoryHighlightedTxIds, onCategoryHover, onCategoryClick, lockedCategory, clearCategoryLock } = useCategoryHighlight(transactions);
-  const { prevMonth, nextMonth } = useMonthNavigation(yearMonth);
-
-  function handleCategoryHover(name: string | null): void {
-    onCategoryHover(name);
-    if (name !== null) clearCardLock();
-  }
-
-  function handleCategoryClick(name: string): void {
-    onCategoryClick(name);
-    clearCardLock();
-  }
-
-  function handleCardHover(name: string | null): void {
-    onCardHover(name);
-    if (name !== null) clearCategoryLock();
-  }
-
-  function handleCardClick(name: string): void {
-    onCardClick(name);
-    clearCategoryLock();
-  }
-
-  const highlightedTxIds = useMemo(() => {
-    if (cardHighlightedTxIds.size > 0) return cardHighlightedTxIds;
-    return categoryHighlightedTxIds;
-  }, [cardHighlightedTxIds, categoryHighlightedTxIds]);
+    cards,
+    cardColorMap,
+    cardsWithSpending,
+    lockedCard,
+    lockedCategory,
+    highlightedTxIds,
+    nav,
+    handleCategoryHover,
+    handleCategoryClick,
+    handleCardHover,
+    handleCardClick,
+  } = useMonthDetailState(yearMonth);
 
   return (
     <div className={styles.detailContainer}>
       <div className={styles.monthHeader}>
-        <button onClick={() => navigate(`/month/${prevMonth}`)} className={styles.arrowBtn} disabled={!prevMonth}>
+        <button onClick={() => navigate(`/month/${nav.prevMonth}`)} className={styles.arrowBtn} disabled={!nav.prevMonth}>
           <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M8 1 L2 7 L8 13 M2 7 L18 7" />
           </svg>
         </button>
         <h1 className={styles.pageTitle}>{formatMonth(yearMonth)}</h1>
-        <button onClick={() => navigate(`/month/${nextMonth}`)} className={styles.arrowBtn} disabled={!nextMonth}>
+        <button onClick={() => navigate(`/month/${nav.nextMonth}`)} className={styles.arrowBtn} disabled={!nav.nextMonth}>
           <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 1 L18 7 L12 13 M18 7 L2 7" />
           </svg>

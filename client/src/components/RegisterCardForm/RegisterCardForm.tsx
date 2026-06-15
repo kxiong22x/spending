@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MAX_NAME_LENGTH } from '../../constants/constants';
+import { useFormState } from '../../hooks/useFormState';
 import styles from './RegisterCardForm.module.css';
 
 interface Props {
@@ -8,21 +9,14 @@ interface Props {
 
 export default function RegisterCardForm({ registerCard }: Props) {
   const [name, setName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const { error, saving, run } = useFormState();
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
+    await run(async () => {
       await registerCard(name.trim());
       setName('');
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -35,9 +29,9 @@ export default function RegisterCardForm({ registerCard }: Props) {
           onChange={e => setName(e.target.value)}
           placeholder="e.g. AMEX 5543"
           maxLength={MAX_NAME_LENGTH}
-          disabled={submitting}
+          disabled={saving}
         />
-        <button type="submit" className={styles.registerBtn} disabled={submitting || !name.trim()}>
+        <button type="submit" className={styles.registerBtn} disabled={saving || !name.trim()}>
           Register
         </button>
       </form>
