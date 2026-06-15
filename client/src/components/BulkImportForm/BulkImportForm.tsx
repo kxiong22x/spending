@@ -77,7 +77,7 @@ export default function BulkImportForm({ onSuccess }: BulkImportFormProps) {
         onFilesAdded={handleFilesAdded}
         onFileRemoved={handleFileRemoved}
         disabled={importing}
-        noCardsMessage={<><Link to="/cards">Add a card</Link> before importing.</>}
+        noCardsMessage={<><Link to="/cards">Add a card</Link> before importing data.</>}
       />
 
       {parsed?.fileResults && <UploadErrors results={parsed.fileResults} />}
@@ -117,7 +117,7 @@ export default function BulkImportForm({ onSuccess }: BulkImportFormProps) {
         <p className={styles.rateError}>Rate limit reached. Please wait before retrying.</p>
       )}
 
-      {!importDone && (
+      {!importDone && cards.length > 0 && (
         <button
           onClick={handleImport}
           disabled={!hasDetectedMonths || importing}

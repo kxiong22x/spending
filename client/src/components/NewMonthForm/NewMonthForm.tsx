@@ -93,7 +93,7 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
         cardFiles={cardFiles}
         onFilesAdded={handleFilesAdded}
         onFileRemoved={handleFileRemoved}
-        noCardsMessage={<><Link to="/cards">Add a card</Link> before creating a month.</>}
+        noCardsMessage={<><Link to="/cards">Add a card</Link> before importing data.</>}
       />
 
       {missingCards.length > 0 && (
@@ -109,7 +109,7 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
         <UploadErrors results={status.results} />
       )}
 
-      {missingCards.length === 0 && (
+      {missingCards.length === 0 && cards.length > 0 && (
         <button onClick={() => handleCreate(false)} disabled={!canCreate} className={styles.createBtn}>
           {status === 'loading' ? <>Creating<AnimatedEllipsis /></> : 'Create'}
         </button>
