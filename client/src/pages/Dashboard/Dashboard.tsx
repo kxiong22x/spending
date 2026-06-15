@@ -14,9 +14,14 @@ export default function Dashboard() {
 
   return (
     <main className={styles.main}>
-      <button onClick={() => navigate('/month/new')} className={styles.newBtn}>
-        + New month
-      </button>
+      <div className={styles.actions}>
+        <button onClick={() => navigate('/month/new')} className={styles.newBtn}>
+          + New Month
+        </button>
+        <button onClick={() => navigate('/month/bulk')} className={styles.bulkBtn}>
+          + Bulk Import
+        </button>
+      </div>
 
       <MonthList months={months} onDelete={handleDeleteMonth} />
     </main>

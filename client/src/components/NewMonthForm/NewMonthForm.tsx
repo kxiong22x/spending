@@ -8,6 +8,7 @@ import MonthPicker from '../MonthPicker/MonthPicker';
 import CsvDropzone from '../CsvDropzone/CsvDropzone';
 import UploadErrors from '../UploadErrors/UploadErrors';
 import styles from './NewMonthForm.module.css';
+import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 
 interface FileResult {
   file: string;
@@ -103,7 +104,7 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
       <p className={styles.hint}>Only transactions within the selected month will be imported. Transactions from other months will be ignored.</p>
 
       {cardsLoading ? (
-        <p>Loading cards…</p>
+        <p>Loading cards<AnimatedEllipsis /></p>
       ) : cards.length === 0 ? (
         <p className={styles.noCards}>No cards registered. <Link to="/cards">Add a card</Link> before creating a month.</p>
       ) : (
@@ -138,7 +139,7 @@ export default function NewMonthForm({ onSuccess }: NewMonthFormProps) {
 
       {missingCards.length === 0 && (
         <button onClick={() => handleCreate(false)} disabled={!canCreate} className={styles.createBtn}>
-          {status === 'loading' ? 'Creating…' : 'Create'}
+          {status === 'loading' ? <>Creating<AnimatedEllipsis /></> : 'Create'}
         </button>
       )}
     </div>

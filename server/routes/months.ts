@@ -8,13 +8,14 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const result = await db.execute({
-    sql: `SELECT DISTINCT strftime('%Y-%m', date) AS month
+    sql: `SELECT strftime('%Y-%m', date) AS month, SUM(amount) AS total
           FROM transactions
           WHERE user_id = ?
+          GROUP BY month
           ORDER BY month DESC`,
     args: [req.user!.id],
   });
-  res.json(result.rows.map(r => r.month));
+  res.json(result.rows.map(r => ({ month: r.month, total: r.total })));
 });
 
 // DELETE /months/:yearMonth  — delete all transactions for a month

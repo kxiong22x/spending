@@ -9,7 +9,7 @@ export function useMonthNavigation(yearMonth: string): {
   const { months } = useMonths();
 
   return useMemo(() => {
-    const sorted = [...months].sort();
+    const sorted = [...months].map(m => m.month).sort();
     const i = sorted.indexOf(yearMonth);
     return {
       prevMonth: i > 0 ? sorted[i - 1] : null,

@@ -8,10 +8,12 @@ interface HorizontalBarChartProps {
   categories: Array<{ name: string; total: number }>;
   colorMap: Record<string, string>;
   onSliceHover?: (name: string | null) => void;
+  onSliceClick?: (name: string) => void;
+  lockedSlice?: string | null;
 }
 
-export default function HorizontalBarChart({ title, categories, colorMap, onSliceHover }: HorizontalBarChartProps) {
-  const { handleMouseEnter, handleMouseLeave, sliceOpacity } = useSliceHover(onSliceHover);
+export default function HorizontalBarChart({ title, categories, colorMap, onSliceHover, onSliceClick, lockedSlice }: HorizontalBarChartProps) {
+  const { handleMouseEnter, handleMouseLeave, handleClick, sliceOpacity } = useSliceHover(onSliceHover, onSliceClick, lockedSlice);
 
   const total = categories.reduce((sum, c) => sum + c.total, 0);
   if (total === 0) return null;
@@ -34,6 +36,7 @@ export default function HorizontalBarChart({ title, categories, colorMap, onSlic
               style={{ opacity: sliceOpacity(cat.name), transition: 'opacity 0.15s', cursor: onSliceHover ? 'pointer' : 'default' }}
               onMouseEnter={() => handleMouseEnter(cat.name)}
               onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick(cat.name)}
             >
               <span className={styles.name}>{cat.name}</span>
               <div className={styles.track}>

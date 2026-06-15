@@ -12,17 +12,30 @@ export const CURRENT_MONTH = String(new Date().getMonth() + 1).padStart(2, '0');
 export const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i);
 
 export const PIE_COLORS = [
-  "#5f9595",
-  "#fdbaa8",
-  "#e8d87a",
-  "#abb8bd",
-  "#f2b8b8",
-  "#c8d6d3",
-  "#f0a96a",
-  "#e8cdd4",
-  "#88acab",
-  "#f5e6ea"
+  "#5f9595",  // [0]
+  "#fdbaa8",  // [1]
+  "#e8d87a",  // [2]
+  "#abb8bd",  // [3]
+  "#c97878",  // [4]
+  "#c8d6bb",  // [5]
+  "#f0a96a",  // [6]
+  "#e8cdd4",  // [7]
+  "#88b59a",  // [8]
+  "#f5eede",  // [9]
 ];
+
+// [
+//   "#5f9595",
+//   "#fdbaa8",
+//   "#e8d87a",
+//   "#abb8bd",
+//   "#f2b8b8",
+//   "#c8d6d3",
+//   "#f0a96a",
+//   "#e8cdd4",
+//   "#88acab",
+//   "#f5e6ea"
+// ];
 
 export const CARD_PIE_COLORS = [
   "#a8a4aa", // gray mid-light

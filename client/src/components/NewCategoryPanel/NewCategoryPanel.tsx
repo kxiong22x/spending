@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MAX_NAME_LENGTH } from '../../constants/constants';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewCategoryPanel.module.css';
+import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 
 interface NewCategoryPanelProps {
   onAddCategory: (name: string, isRecurring: boolean) => Promise<void>;
@@ -43,7 +44,7 @@ export default function NewCategoryPanel({ onAddCategory }: NewCategoryPanelProp
             className={panelStyles.panelInput}
           />
           <button type="submit" disabled={!catName.trim() || catSaving} className={panelStyles.panelBtn}>
-            {catSaving ? 'Adding…' : 'Add'}
+            {catSaving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
           </button>
         </div>
         <label className={styles.checkboxLabel}>

@@ -14,10 +14,12 @@ interface PieChartProps {
   categories: Array<{ name: string; total: number }>;
   colorMap: Record<string, string>;
   onSliceHover?: (name: string | null) => void;
+  onSliceClick?: (name: string) => void;
+  lockedSlice?: string | null;
 }
 
-export default function PieChart({ title, categories, colorMap, onSliceHover }: PieChartProps) {
-  const { handleMouseEnter, handleMouseLeave, sliceOpacity } = useSliceHover(onSliceHover);
+export default function PieChart({ title, categories, colorMap, onSliceHover, onSliceClick, lockedSlice }: PieChartProps) {
+  const { handleMouseEnter, handleMouseLeave, handleClick, sliceOpacity } = useSliceHover(onSliceHover, onSliceClick, lockedSlice);
   const total = categories.reduce((sum, c) => sum + c.total, 0);
   if (total === 0) return null;
 
@@ -37,6 +39,7 @@ export default function PieChart({ title, categories, colorMap, onSliceHover }: 
           style={cursorStyle}
           onMouseEnter={() => handleMouseEnter(slices[0].name)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => handleClick(slices[0].name)}
         />
         <circle cx={CX} cy={CY} r={INNER_R} fill="#fff" />
       </svg>
@@ -53,6 +56,7 @@ export default function PieChart({ title, categories, colorMap, onSliceHover }: 
             style={{ ...cursorStyle, transition: 'opacity 0.15s' }}
             onMouseEnter={() => handleMouseEnter(s.name)}
             onMouseLeave={handleMouseLeave}
+            onClick={() => handleClick(s.name)}
           />
         ))}
       </svg>
@@ -68,6 +72,7 @@ export default function PieChart({ title, categories, colorMap, onSliceHover }: 
           style={{ opacity: sliceOpacity(s.name), transition: 'opacity 0.15s' }}
           onMouseEnter={() => handleMouseEnter(s.name)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => handleClick(s.name)}
         >
           <span className={styles.swatch} style={{ background: s.color }} />
           <span className={styles.legendName}>{s.name}</span>

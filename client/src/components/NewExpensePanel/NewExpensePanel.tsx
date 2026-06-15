@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import panelStyles from '../../styles/shared.module.css';
 import styles from './NewExpensePanel.module.css';
+import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 import { Card } from '@shared/types';
 
 interface NewTransactionData {
@@ -104,7 +105,7 @@ export default function NewExpensePanel({ allCategoryNames, cards = [], onAddTra
           disabled={!date || !desc.trim() || !category || !amount || txSaving}
           className={panelStyles.panelBtn}
         >
-          {txSaving ? 'Adding…' : 'Add'}
+          {txSaving ? <>Adding<AnimatedEllipsis /></> : 'Add'}
         </button>
       </form>
       {txError && <p className={panelStyles.panelError}>{txError}</p>}

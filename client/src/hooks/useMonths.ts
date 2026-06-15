@@ -16,16 +16,21 @@ export async function uploadMonth(yearMonth: string, cardRows: CardRows[]): Prom
   return data as { inserted: number; skipped: number };
 }
 
+export interface MonthSummary {
+  month: string;
+  total: number;
+}
+
 export default function useMonths(): {
-  months: string[];
+  months: MonthSummary[];
   deleteMonth: (m: string) => Promise<void>;
 } {
-  const [months, setMonths] = useState<string[]>([]);
+  const [months, setMonths] = useState<MonthSummary[]>([]);
 
   useEffect(() => {
     fetch(`${API}/months`, { credentials: 'include' })
       .then(res => res.json())
-      .then((data: string[]) => setMonths(data))
+      .then((data: MonthSummary[]) => setMonths(data))
       .catch(() => setMonths([]));
   }, []);
 
@@ -33,7 +38,7 @@ export default function useMonths(): {
     if (!window.confirm(`Delete ${formatMonth(m)}? All transactions for this month will be permanently deleted.`)) return;
 
     const prev = months;
-    setMonths(months.filter(x => x !== m));
+    setMonths(months.filter(x => x.month !== m));
 
     try {
       const res = await fetch(`${API}/months/${m}`, { method: 'DELETE', credentials: 'include' });

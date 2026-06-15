@@ -5,6 +5,9 @@ import { Transaction, Card } from '@shared/types';
 // Derives per-card spending totals, color assignments, and highlight state from transactions and cards.
 export function useCardSpending(transactions: Transaction[], cards: Card[]) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [lockedCard, setLockedCard] = useState<string | null>(null);
+
+  const effectiveCard = hoveredCard ?? lockedCard;
 
   const cardColorMap = useMemo(() => Object.fromEntries(
     cards.map((card, i) => [card.name, CARD_PIE_COLORS[i % CARD_PIE_COLORS.length]])
@@ -23,11 +26,24 @@ export function useCardSpending(transactions: Transaction[], cards: Card[]) {
   }, [cards, transactions]);
 
   const highlightedTxIds = useMemo(() => {
-    if (!hoveredCard) return new Set<number>();
-    const card = cards.find(c => c.name === hoveredCard);
+    if (!effectiveCard) return new Set<number>();
+    const card = cards.find(c => c.name === effectiveCard);
     if (!card) return new Set<number>();
     return new Set(transactions.filter(tx => tx.card_id === card.id).map(tx => tx.id));
-  }, [hoveredCard, cards, transactions]);
+  }, [effectiveCard, cards, transactions]);
 
-  return { cardColorMap, cardsWithSpending, highlightedTxIds, onCardHover: setHoveredCard };
+  function onCardHover(name: string | null): void {
+    setHoveredCard(name);
+    if (name !== null && name !== lockedCard) setLockedCard(null);
+  }
+
+  function onCardClick(name: string): void {
+    setLockedCard(prev => prev === name ? null : name);
+  }
+
+  function clearCardLock(): void {
+    setLockedCard(null);
+  }
+
+  return { cardColorMap, cardsWithSpending, highlightedTxIds, onCardHover, onCardClick, lockedCard, clearCardLock };
 }

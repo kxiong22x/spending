@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { formatMonth } from '../../utils/format';
+import { formatMonth, formatDollar } from '../../utils/format';
+import { MonthSummary } from '../../hooks/useMonths';
 import styles from './MonthList.module.css';
 
 interface MonthListProps {
-  months: string[];
+  months: MonthSummary[];
   onDelete: (e: React.MouseEvent, m: string) => void;
 }
 
@@ -12,12 +13,13 @@ export default function MonthList({ months, onDelete }: MonthListProps) {
 
   return (
     <div className={styles.monthList}>
-      {months.map(m => {
-        const label = formatMonth(m);
+      {months.map(({ month, total }) => {
+        const label = formatMonth(month);
         return (
-          <div key={m} className={styles.monthRow} onClick={() => navigate(`/month/${m}`)}>
+          <div key={month} className={styles.monthRow} onClick={() => navigate(`/month/${month}`)}>
             <span className={styles.monthLabel}>{label}</span>
-            <button onClick={e => onDelete(e, m)} className={styles.deleteBtn} title="Delete month" aria-label={`Delete ${label}`}>
+            <span className={styles.monthTotal}>Total: {formatDollar(total)}</span>
+            <button onClick={e => onDelete(e, month)} className={styles.deleteBtn} title="Delete month" aria-label={`Delete ${label}`}>
               ✕
             </button>
           </div>

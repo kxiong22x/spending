@@ -29,7 +29,7 @@ interface ParseCsvResult {
   error?: string;
 }
 
-interface FileResult {
+export interface FileResult {
   file: string;
   error?: string;
 }
@@ -129,6 +129,62 @@ export function parseCSV(text: string): ParseCsvResult {
   }
 
   return { rows, parseErrors };
+}
+
+// Groups all CSV rows from all card files by year-month without filtering to a specific month.
+export async function parseAllMonthsForCards(
+  cards: Card[],
+  cardFiles: Record<number, File[]>
+): Promise<{ monthMap: Map<string, CardRows[]>; fileResults: FileResult[]; totalParseErrors: number; monthFileCounts: Map<string, number> }> {
+  const fileResults: FileResult[] = [];
+  let totalParseErrors = 0;
+
+  // Internal accumulators: month -> cardId -> rows, month -> set of "cardId:filename" keys
+  const monthCardRows = new Map<string, Map<number, CsvRow[]>>();
+  const monthFileSets = new Map<string, Set<string>>();
+
+  for (const card of cards) {
+    const files = cardFiles[card.id] ?? [];
+    if (files.length === 0) continue;
+
+    for (const file of files) {
+      let text: string;
+      try {
+        text = await file.text();
+      } catch {
+        fileResults.push({ file: file.name, error: 'Could not read file.' });
+        break;
+      }
+
+      const { rows: parsed, parseErrors, error: parseError } = parseCSV(text);
+      if (parseError) {
+        fileResults.push({ file: file.name, error: parseError });
+        break;
+      }
+
+      totalParseErrors += parseErrors ?? 0;
+
+      for (const row of parsed ?? []) {
+        const ym = row.date.slice(0, 7);
+        if (!monthCardRows.has(ym)) monthCardRows.set(ym, new Map());
+        const cardMap = monthCardRows.get(ym)!;
+        if (!cardMap.has(card.id)) cardMap.set(card.id, []);
+        cardMap.get(card.id)!.push(row);
+
+        if (!monthFileSets.has(ym)) monthFileSets.set(ym, new Set());
+        monthFileSets.get(ym)!.add(`${card.id}:${file.name}`);
+      }
+    }
+  }
+
+  const monthMap = new Map<string, CardRows[]>();
+  for (const [ym, cardMap] of monthCardRows) {
+    monthMap.set(ym, [...cardMap].map(([cardId, rows]) => ({ cardId, rows })));
+  }
+
+  const monthFileCounts = new Map([...monthFileSets].map(([ym, s]) => [ym, s.size]));
+
+  return { monthMap, fileResults, totalParseErrors, monthFileCounts };
 }
 
 // Reads and parses CSV files for each card, returning structured row data or file-level errors.

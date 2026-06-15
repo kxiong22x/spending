@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import AnimatedEllipsis from '../AnimatedEllipsis/AnimatedEllipsis';
 import { useNavigate } from 'react-router-dom';
 import { formatMonth, formatDollar } from '../../utils/format';
 import useMonthData from '../../hooks/useMonthData';
@@ -42,9 +43,29 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
   } = useMonthData(yearMonth);
 
   const { cards } = useCards();
-  const { cardColorMap, cardsWithSpending, highlightedTxIds: cardHighlightedTxIds, onCardHover } = useCardSpending(transactions, cards);
-  const { categoryHighlightedTxIds, onCategoryHover } = useCategoryHighlight(transactions);
+  const { cardColorMap, cardsWithSpending, highlightedTxIds: cardHighlightedTxIds, onCardHover, onCardClick, lockedCard, clearCardLock } = useCardSpending(transactions, cards);
+  const { categoryHighlightedTxIds, onCategoryHover, onCategoryClick, lockedCategory, clearCategoryLock } = useCategoryHighlight(transactions);
   const { prevMonth, nextMonth } = useMonthNavigation(yearMonth);
+
+  function handleCategoryHover(name: string | null): void {
+    onCategoryHover(name);
+    if (name !== null) clearCardLock();
+  }
+
+  function handleCategoryClick(name: string): void {
+    onCategoryClick(name);
+    clearCardLock();
+  }
+
+  function handleCardHover(name: string | null): void {
+    onCardHover(name);
+    if (name !== null) clearCategoryLock();
+  }
+
+  function handleCardClick(name: string): void {
+    onCardClick(name);
+    clearCategoryLock();
+  }
 
   const highlightedTxIds = useMemo(() => {
     if (cardHighlightedTxIds.size > 0) return cardHighlightedTxIds;
@@ -61,19 +82,19 @@ export default function MonthDetail({ yearMonth }: MonthDetailProps) {
       {!loading && <p className={styles.totalSpend}>Total Spending: {formatDollar(totalSpending)}</p>}
 
       {loading ? (
-        <p className={styles.muted}>Loading…</p>
+        <p className={styles.muted}>Loading<AnimatedEllipsis /></p>
       ) : (
         <>
           {(categoriesWithTxs.length > 0 || cardsWithSpending.length > 0) && (
             <div className={styles.pieRow}>
               {categoriesWithTxs.length > 0 && (
                 <div className={styles.pieCell}>
-                  <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} onSliceHover={onCategoryHover} />
+                  <PieChart title="Spending by Category" categories={categoriesWithTxs} colorMap={colorMap} onSliceHover={handleCategoryHover} onSliceClick={handleCategoryClick} lockedSlice={lockedCategory} />
                 </div>
               )}
               {cardsWithSpending.length > 0 && (
                 <div className={styles.pieCell}>
-                  <HorizontalBarChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={onCardHover} />
+                  <HorizontalBarChart title="Spending by Card" categories={cardsWithSpending} colorMap={cardColorMap} onSliceHover={handleCardHover} onSliceClick={handleCardClick} lockedSlice={lockedCard} />
                 </div>
               )}
             </div>
